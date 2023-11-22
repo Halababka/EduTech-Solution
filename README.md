@@ -1,31 +1,26 @@
 # main/api
 
+## Запуск dev
 
-
-## Getting Started
-
-Download links:
-
-SSH clone URL: ssh://git@git.jetbrains.space/lpx/main/api.git
-
-HTTPS clone URL: https://git.jetbrains.space/lpx/main/api.git
-
-
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
-
-## Prerequisites
-
-What things you need to install the software and how to install them.
-
-```
-Examples
+```shell
+npm install
 ```
 
-## Deployment
+```shell
+npm run dev
+```
 
-Add additional notes about how to deploy this on a production system.
 
-## Resources
+## Prisma
 
-Add links to external resources for this project, such as CI server, bug tracker, etc.
+После изменении/создании модели нужно написать
+
+```shell
+npx prisma migrate dev
+```
+Не помню зачем, но может потребоваться
+```shell
+npx prisma generate --schema=./database/schema.prisma
+```
+
+

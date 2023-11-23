@@ -1,14 +1,40 @@
 import { client, Prisma } from '../db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const saltRounds = 10;
+const secret = process.env.SECRET;
+
+const generateAuthToken = function (id) {
+    return jwt.sign({id: id}, secret
+        //     , {
+        //     expiresIn: '300000'
+        // }
+    );
+};
 
 class AuthController {
     async auth(req, res) {
         const {username, password} = req.body;
 
-        res.json({nickname, password});
+        const user = await client.user.findUnique({
+            where: {
+                username: username,
+            },
+        });
+        if (user && await bcrypt.compare(password, user.password)) {
+            res.json({token: generateAuthToken(user.id)})
+            return
+        } else {
+            res.json({error: 'Неверное имя пользователя или пароль'})
+            return
+        }
     }
 
     async register(req, res) {
-        const {first_name, middle_name, last_name, username, about} = req.body;
+        const {first_name, middle_name, last_name, username, password, about} = req.body;
+        const encryptedPassword = await bcrypt.hash(password, saltRounds)
+
 
         let newUser;
         try {
@@ -18,6 +44,7 @@ class AuthController {
                     middle_name: middle_name,
                     last_name: last_name,
                     username: username,
+                    password: encryptedPassword,
                     about: about,
                 },
             });

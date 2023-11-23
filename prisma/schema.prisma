@@ -8,10 +8,10 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  first_name String
+  id          Int     @id @default(autoincrement())
+  first_name  String
   middle_name String?
-  last_name String
-  username String @unique
-  about String?
+  last_name   String
+  username    String  @unique
+  about       String?
 }

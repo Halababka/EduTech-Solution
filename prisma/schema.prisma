@@ -13,5 +13,6 @@ model User {
   middle_name String?
   last_name   String
   username    String  @unique
+  password    String?
   about       String?
 }

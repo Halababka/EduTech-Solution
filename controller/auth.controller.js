@@ -17,11 +17,17 @@ class AuthController {
     async auth(req, res) {
         const {username, password} = req.body;
 
+        if (!username || !password) {
+            res.json({error: 'Логин или пароль не может быть пустой'})
+            return
+        }
+
         const user = await client.user.findUnique({
             where: {
                 username: username,
             },
         });
+
         if (user && await bcrypt.compare(password, user.password)) {
             res.json({token: generateAuthToken(user.id)})
             return

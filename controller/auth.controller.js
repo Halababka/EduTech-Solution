@@ -23,10 +23,17 @@ class AuthController {
             });
         } catch (e) {
             if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                if (e.code === 'P2002') {
-                    res.json({error: 'Пользователь с такими данными уже создан (username должен быть уникальным)'})
-                    return
-                } else res.json({error: 'Необрабатываемая ошибка'})
+                switch (e.code) {
+                    case 'P2002':
+                        res.json({error: 'Пользователь с такими данными уже создан (username должен быть уникальным)'})
+                        return
+                    case 'P1001':
+                        res.json({error: 'Нет подключения с БД'})
+                        return
+                    default:
+                        res.json({error: 'Необрабатываемая ошибка'})
+                        return
+                }
             } else res.json({error: 'Неизвестная ошибка'})
         }
 

@@ -16,3 +16,8 @@ model User {
   password    String?
   about       String?
 }
+
+model Courses {
+  id          Int     @id @default(autoincrement())
+  name  String
+}

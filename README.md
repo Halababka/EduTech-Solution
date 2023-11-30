@@ -20,7 +20,7 @@ npx prisma migrate dev
 ```
 Не помню зачем, но может потребоваться
 ```shell
-npx prisma generate --schema=./database/schema.prisma
+npx prisma generate --schema=./prisma/schema.prisma
 ```
 
 

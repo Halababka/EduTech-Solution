@@ -1,5 +1,6 @@
-import { client, Prisma } from "../db.js";
+import { client } from "../db.js";
 import bcrypt from "bcrypt";
+import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 
 const saltRounds = 10;
 
@@ -30,19 +31,8 @@ class CoursesController {
                 }
             });
         } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                switch (e.code) {
-                    case "P2002":
-                        res.json({error: ""});
-                        return;
-                    case "P1001":
-                        res.json({error: "Нет подключения с БД"});
-                        return;
-                    default:
-                        res.json({error: "Необрабатываемая ошибка"});
-                        return;
-                }
-            } else res.json({error: "Неизвестная ошибка"});
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
         }
 
         res.json(newCourses);
@@ -66,19 +56,8 @@ class CoursesController {
                 }
             });
         } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                switch (e.code) {
-                    case "P2002":
-                        res.json({error: "Пользователь с такими данными уже создан (username должен быть уникальным)"});
-                        return;
-                    case "P1001":
-                        res.json({error: "Нет подключения с БД"});
-                        return;
-                    default:
-                        res.json({error: "Необрабатываемая ошибка"});
-                        return;
-                }
-            } else res.json({error: "Неизвестная ошибка"});
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
         }
 
         res.json(newUser);

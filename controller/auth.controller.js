@@ -1,6 +1,7 @@
 import { client, Prisma } from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 
 const saltRounds = 10;
 const secret = process.env.SECRET;
@@ -12,6 +13,20 @@ const generateAuthToken = function (id) {
         // }
     );
 };
+
+const isUsernameExist = async (res, username) => {
+    try {
+        const user = await client.user.findUnique({
+            where: {
+                username: username,
+            },
+        });
+        return !!user;
+    } catch (e) {
+        res.status(500).json({error: dbErrorsHandler(e)})
+        return
+    }
+}
 
 class AuthController {
     async auth(req, res) {
@@ -30,10 +45,8 @@ class AuthController {
 
         if (user && await bcrypt.compare(password, user.password)) {
             res.json({token: generateAuthToken(user.id)})
-            return
         } else {
             res.json({error: 'Неверное имя пользователя или пароль'})
-            return
         }
     }
 
@@ -41,6 +54,10 @@ class AuthController {
         const {first_name, middle_name, last_name, username, password, about} = req.body;
         const encryptedPassword = await bcrypt.hash(password, saltRounds)
 
+        if (await isUsernameExist(res, username)) {
+            res.status(409).json({error: 'Данный username уже занят'})
+            return
+        }
 
         let newUser;
         try {
@@ -55,19 +72,8 @@ class AuthController {
                 },
             });
         } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                switch (e.code) {
-                    case 'P2002':
-                        res.json({error: 'Пользователь с такими данными уже создан (username должен быть уникальным)'})
-                        return
-                    case 'P1001':
-                        res.json({error: 'Нет подключения с БД'})
-                        return
-                    default:
-                        res.json({error: 'Необрабатываемая ошибка'})
-                        return
-                }
-            } else res.json({error: 'Неизвестная ошибка'})
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
         }
 
         res.json(newUser);

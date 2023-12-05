@@ -8,16 +8,76 @@ datasource db {
 }
 
 model User {
-  id          Int     @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   first_name  String
   middle_name String?
   last_name   String
-  username    String  @unique
+  username    String      @unique
   password    String?
   about       String?
+  role        Roles?      @relation(fields: [rolesId], references: [id])
+  group       Groups?     @relation(fields: [groupsId], references: [id])
+  Materials   Materials[]
+  groupsId    Int?
+  rolesId     Int         @default(1)
+}
+
+model Roles {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  User        User[]
+  permissions Permissions[]
+}
+
+model Permissions {
+  id    Int     @id @default(autoincrement())
+  name  String
+  roles Roles[]
+}
+
+model Groups {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model Categories {
+  id      Int       @id @default(autoincrement())
+  name    String
+  courses Courses[]
 }
 
 model Courses {
-  id          Int     @id @default(autoincrement())
-  name  String
+  id          Int          @id @default(autoincrement())
+  image_url   String
+  name        String
+  description String
+  chapters    Chapters[]
+  materials   Materials[]
+  starts_at   DateTime
+  ends_at     DateTime
+  categories  Categories[]
+}
+
+model Chapters {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String
+  unlocks_at  DateTime
+  materials   Materials[]
+  Courses     Courses?    @relation(fields: [coursesId], references: [id])
+  coursesId   Int?
+}
+
+model Materials {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String
+  mime_type   String
+  path        String
+  owner       User       @relation(fields: [userId], references: [id])
+  size        Int
+  chapters    Chapters[]
+  courses     Courses[]
+  userId      Int
 }

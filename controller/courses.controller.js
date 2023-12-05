@@ -4,7 +4,7 @@ import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 
 const saltRounds = 10;
 
-class CoursesController {
+export class CoursesController {
 
     async allCourses(req, res) {
         let allCourses;
@@ -63,14 +63,3 @@ class CoursesController {
         res.json(newUser);
     }
 }
-
-// Это предложил чатгпт я хз в правильности этого решения
-export const allCourses = async (req, res) => {
-    const controller = new CoursesController();
-    await controller.allCourses(req, res);
-};
-export const newCourses = async (req, res) => {
-    const controller = new CoursesController();
-    await controller.newCourses(req, res);
-};
-// export default new AuthController();

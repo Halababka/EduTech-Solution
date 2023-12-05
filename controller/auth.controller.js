@@ -1,4 +1,4 @@
-import { client, Prisma } from '../db.js';
+import { client } from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
@@ -28,7 +28,7 @@ const isUsernameExist = async (res, username) => {
     }
 }
 
-class AuthController {
+export class AuthController {
     async auth(req, res) {
         const {username, password} = req.body;
 
@@ -79,15 +79,3 @@ class AuthController {
         res.json(newUser);
     }
 }
-
-// Это предложил чатгпт я хз в правильности этого решения
-export const auth = async (req, res) => {
-    const controller = new AuthController();
-    await controller.auth(req, res);
-};
-export const register = async (req, res) => {
-    const controller = new AuthController();
-    await controller.register(req, res);
-};
-
-// export default new AuthController();

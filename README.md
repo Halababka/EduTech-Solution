@@ -22,5 +22,11 @@ npx prisma migrate dev
 ```shell
 npx prisma generate --schema=./prisma/schema.prisma
 ```
-
-
+Запись в БД первоначальных данных из файла seed.js
+```shell
+npx prisma db seed
+```
+Запуск Prisma studio
+```shell
+npx prisma studio
+```

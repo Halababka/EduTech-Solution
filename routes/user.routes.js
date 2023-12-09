@@ -6,6 +6,6 @@ const router = express.Router();
 import { authenticateToken } from '../middleware/authenticateToken.js'
 
 router.get('/me', authenticateToken, userController.myself);
-
+router.get('/role/:role_id/perm', authenticateToken, userController.rolePermissions)
 export default router;
 

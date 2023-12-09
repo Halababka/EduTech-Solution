@@ -4,7 +4,7 @@ export const usersData = [
         middle_name: "Александрович",
         last_name: "Попов",
         username: "ilya",
-        password: "2001",
+        password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Студент ВИТИ НИЯУ МИФИ. Учусь на 4 курсе",
         groupsId: 1,
         rolesId: 3
@@ -14,7 +14,7 @@ export const usersData = [
         middle_name: "Иванович",
         last_name: "Иванов",
         username: "ivan",
-        password: "ivan",
+        password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Всем привет, я учусь в ВИТИ НИЯУ МИФИ",
         groupsId: 2,
         rolesId: 1
@@ -24,7 +24,7 @@ export const usersData = [
         middle_name: "Петрович",
         last_name: "Петров",
         username: "petr",
-        password: "petr",
+        password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Всем привет, я работаю преподавателем в ВИТИ НИЯУ МИФИ",
         groupsId: 3,
         rolesId: 2

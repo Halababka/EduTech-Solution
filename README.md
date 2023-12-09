@@ -1,5 +1,7 @@
 # main/api
 
+Пароль test от базовых аккаунтов из файла seed: ilya, ivan, petr
+
 ## Запуск dev
 
 ```shell

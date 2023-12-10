@@ -24,7 +24,6 @@ const isUsernameExist = async (res, username) => {
         return !!user;
     } catch (e) {
         res.status(500).json({error: dbErrorsHandler(e)})
-        return
     }
 }
 
@@ -33,7 +32,7 @@ export class AuthController {
         const {username, password} = req.body;
 
         if (!username || !password) {
-            res.json({error: 'Логин или пароль не может быть пустой'})
+            res.status(400).json({error: 'Логин или пароль не может быть пустой'})
             return
         }
 
@@ -46,7 +45,7 @@ export class AuthController {
         if (user && await bcrypt.compare(password, user.password)) {
             res.json({token: generateAuthToken(user.id)})
         } else {
-            res.json({error: 'Неверное имя пользователя или пароль'})
+            res.status(400).json({error: 'Неверное имя пользователя или пароль'})
         }
     }
 

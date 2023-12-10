@@ -1,10 +1,10 @@
 import express from 'express';
-import {UserController} from '../controller/user.controller.js';
+import {SelfController} from '../controller/self.controller.js';
 
-const userController = new UserController();
+const selfController = new SelfController();
 const router = express.Router();
 import {authenticateToken} from '../middleware/authenticateToken.js'
 
 router.use(authenticateToken)
-router.get('/:user_id', userController.getUser)
+router.get('/', selfController.myself);
 export default router;

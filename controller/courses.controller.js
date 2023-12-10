@@ -1,4 +1,4 @@
-import { client } from "../db.js";
+import {client} from "../db.js";
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 
 export class CoursesController {
@@ -16,7 +16,7 @@ export class CoursesController {
         res.json(allCourses);
     }
 
-    async newCourses(req, res) {
+    async newCourse(req, res) {
         const {name} = req.body;
 
         let newCourses;

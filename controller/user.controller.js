@@ -31,22 +31,19 @@ export class UserController {
 
     async rolePermissions(req, res) {
         let permissions;
-        const {role_id} = req.query;
-        try {
-            if (role_id !== undefined) {
-                permissions = await client.rolesToPermissions.findMany({
-                    select: {
-                        permissions: true
-                    },
-                    where: {
-                        roles_id: role_id
-                    }
-                });
+        const {role_id} = req.params;
 
-                res.json(permissions);
-            } else {
-                res.json({error: "Нопределенное значение в параметре"});
-            }
+        try {
+            permissions = await client.rolesToPermissions.findMany({
+                select: {
+                    permissions: true
+                },
+                where: {
+                    roles_id: Number(role_id)
+                }
+            });
+            res.json(permissions);
+
         } catch (e) {
             res.json({error: "Неизвестная ошибка"});
         }

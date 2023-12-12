@@ -13,8 +13,12 @@ export class Users {
                     about: true,
                     group: true,
                     role: {
-                        select: {
-                            permissions: true
+                        include: {
+                            permissions: {
+                                include: {
+                                    permissions: true
+                                }
+                            }
                         }
                     }
                 },

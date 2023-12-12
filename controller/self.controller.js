@@ -2,10 +2,21 @@ import {DB} from "../db/db.js";
 
 const db = new DB()
 
+function roleFormat(obj) {
+    return obj.role.permissions.map((permission) => {
+        return {
+            id: permission.permissions.id,
+            name: permission.permissions.name,
+        };
+    });
+}
+
 export class SelfController {
     async myself(req, res) {
         const user_id = req.user.id;
-
-        res.json(await db.getUser(user_id));
+        let user = await db.getUser(user_id)
+        user.permissions = roleFormat(user)
+        delete user.role
+        res.json(user);
     }
 }

@@ -38,7 +38,6 @@ model Permissions {
 model RolesToPermissions {
   roles_id       Int
   permissions_id Int
-  value          Boolean
   roles          Roles       @relation(fields: [roles_id], references: [id])
   permissions    Permissions @relation(fields: [permissions_id], references: [id])
 

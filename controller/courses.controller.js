@@ -36,7 +36,8 @@ export class CoursesController {
     }
 
     async newCourse(req, res) {
-        const {image_url, name, description, starts_at, ends_at} = req.body;
+        const {image_url, name, description, starts_at, ends_at, chapters, materials} = req.body;
+        const user_id = req.user.id;
 
         let newCourses;
 
@@ -46,8 +47,33 @@ export class CoursesController {
                     image_url: image_url,
                     name: name,
                     description: description,
-                    // chapters: null,
-                    // materials: null,
+                    chapters: {
+                        create: chapters.map(chapter => ({
+                            name: chapter.name,
+                            description: chapter.description,
+                            unlocks_at: chapter.unlocks_at,
+                            materials: {
+                                create: chapter.materials.map(material => ({
+                                    name: material.name,
+                                    description: material.description,
+                                    mime_type: material.mime_type,
+                                    path: material.path,
+                                    size: material.size,
+                                    userId: user_id
+                                }))
+                            }
+                        }))
+                    },
+                    // materials: {
+                    //     create: materials.map(material => ({
+                    //         name: material.name,
+                    //         description: material.description,
+                    //         mime_type: material.mime_type,
+                    //         path: material.path,
+                    //         size: material.size,
+                    //         userId: user_id
+                    //     }))
+                    // },
                     starts_at: starts_at,
                     ends_at: ends_at,
                     // categories: null

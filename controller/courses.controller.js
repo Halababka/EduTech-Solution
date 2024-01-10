@@ -36,12 +36,15 @@ export class CoursesController {
     }
 
     async newCourse(req, res) {
-        const {image_url, name, description, starts_at, ends_at, chapters, materials} = req.body;
+        let {image_url, name, description, starts_at, ends_at, chapters, materials} = req.body;
         const user_id = req.user.id;
 
         let newCourses;
 
         try {
+            name = name.trim()
+            description = description.trim()
+
             newCourses = await client.courses.create({
                 data: {
                     image_url: image_url,

@@ -23,25 +23,16 @@ model User {
 }
 
 model Roles {
-  id          Int                  @id @default(autoincrement())
-  name        String               @unique
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
   User        User[]
-  permissions RolesToPermissions[]
+  permissions Permissions[]
 }
 
 model Permissions {
-  id    Int                  @id @default(autoincrement())
-  name  String               @unique
-  roles RolesToPermissions[]
-}
-
-model RolesToPermissions {
-  roles_id       Int
-  permissions_id Int
-  roles          Roles       @relation(fields: [roles_id], references: [id])
-  permissions    Permissions @relation(fields: [permissions_id], references: [id])
-
-  @@id([roles_id, permissions_id])
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  roles Roles[]
 }
 
 model Groups {

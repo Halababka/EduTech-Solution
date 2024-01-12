@@ -1,4 +1,4 @@
-import {client} from "../db.js";
+import { client } from "../db.js";
 
 export class Users {
     async get(user_id) {
@@ -14,11 +14,7 @@ export class Users {
                     group: true,
                     role: {
                         include: {
-                            permissions: {
-                                include: {
-                                    permissions: true
-                                }
-                            }
+                            permissions: true
                         }
                     }
                 },
@@ -27,8 +23,8 @@ export class Users {
                 }
             });
         } catch (e) {
-            return {error: e.name}
+            return {error: e.name};
         }
-        return user
+        return user;
     }
 }

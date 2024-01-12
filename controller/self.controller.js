@@ -5,8 +5,8 @@ const db = new DB()
 function roleFormat(obj) {
     return obj.role.permissions.map((permission) => {
         return {
-            id: permission.permissions.id,
-            name: permission.permissions.name,
+            id: permission.id,
+            name: permission.name,
         };
     });
 }

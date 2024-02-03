@@ -21,4 +21,9 @@ router.post('/themes/:theme_id/questions', testsController.getTest)
 router.get('/themes/:theme_id/questions/:question_id', testsController.getTest)
 router.put('/themes/:theme_id/questions/:question_id', testsController.getTest)
 router.delete('/themes/:theme_id/questions/:question_id', testsController.getTest)
+// /tests/themes/questions/answers
+router.post('/themes/:theme_id/questions/:question_id', testsController.getTest)
+router.get('/themes/:theme_id/questions/:question_id', testsController.getTest)
+router.put('/themes/:theme_id/questions/:question_id/answers/:answer_id', testsController.getTest)
+router.delete('/themes/:theme_id/questions/:question_id/answers/:answer_id', testsController.getTest)
 export default router;

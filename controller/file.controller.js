@@ -1,39 +1,29 @@
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import { s3 } from '../s3.js';
-
-const storage = multerS3({
-    s3,
-    bucket: 'productive-girls',
-    acl: 'public-read',
-    key: function (req, file, cb) {
-        cb(null, `uploads/${Date.now()}-${file.originalname}`);
-    },
-});
-
-const upload = multer({ storage }).single('file');
+import { s3 } from "../s3(1).js";
 
 export class FileController {
     async uploadFile(req, res) {
-        console.log(res)
-        try {
-            upload(req, res, (err) => {
-                if (err instanceof multer.MulterError) {
-                    return res.status(500).json({ error: 'Multer error' });
-                } else if (err) {
-                    return res.status(500).json({ error: 'Unknown error' });
-                }
+        const upload = multer({
+            storage: multerS3({
+                s3: s3,
+                bucket: process.env.AWS_S3_BUCKET_NAME,
+                contentType: multerS3.AUTO_CONTENT_TYPE,
+                acl: 'public-read',
+                key: (req, file, cb) => {
+                    cb(null, `uploads/${Date.now()}-${file.originalname}`);
+                },
+            }),
+        }).single('file');
 
-                if (!req.file) {
-                    return res.status(400).json({ error: 'No file uploaded' });
-                }
+        upload(req, res, (err) => {
+            if (err) {
+                console.error('Error uploading file:', err);
+                return res.status(500).json({ error: 'Error uploading file' });
+            }
 
-                console.log('File uploaded:', req.file);
-                res.status(200).json({ message: 'File uploaded successfully' });
-            });
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            res.status(500).json({ error: 'Error uploading file' });
-        }
+            console.log('File uploaded successfully');
+            return res.status(200).json({ message: 'File uploaded successfully' });
+        });
     }
 }

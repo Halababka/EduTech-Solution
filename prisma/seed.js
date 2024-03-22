@@ -43,7 +43,7 @@ async function main() {
 
     const permission1 = await prisma.permissions.create({
         data: {
-            name: 'CREATE_COURSE',
+            name: 'CREATE_COURSES',
             roles: {
                 connect: [
                     { id: roleAdmin.id },

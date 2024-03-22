@@ -49,9 +49,9 @@ model Categories {
 
 model Courses {
   id          Int          @id @default(autoincrement())
-  image_url   String
+  image_url   String?
   name        String
-  description String
+  description String?
   chapters    Chapters[]
   materials   Materials[]
   starts_at   DateTime

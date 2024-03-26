@@ -8,18 +8,20 @@ datasource db {
 }
 
 model User {
-  id          Int         @id @default(autoincrement())
-  first_name  String
-  middle_name String?
-  last_name   String
-  username    String      @unique
-  password    String?
-  about       String?
-  role        Roles?      @relation(fields: [rolesId], references: [id])
-  group       Groups?     @relation(fields: [groupsId], references: [id])
-  Materials   Materials[]
-  groupsId    Int?
-  rolesId     Int         @default(1)
+  id              Int         @id @default(autoincrement())
+  first_name      String
+  middle_name     String?
+  last_name       String
+  username        String      @unique
+  password        String?
+  about           String?
+  role            Roles?      @relation(fields: [rolesId], references: [id])
+  group           Groups?     @relation(fields: [groupsId], references: [id])
+  Materials       Materials[]
+  groupsId        Int?
+  rolesId         Int         @default(1)
+  enrolledCourses Courses[]   @relation("EnrolledCourses")
+  coursesOwned    Courses[]   @relation("CoursesOwners")
 }
 
 model Roles {
@@ -48,15 +50,17 @@ model Categories {
 }
 
 model Courses {
-  id          Int          @id @default(autoincrement())
-  image_url   String?
-  name        String
-  description String?
-  chapters    Chapters[]
-  materials   Materials[]
-  starts_at   DateTime
-  ends_at     DateTime
-  categories  Categories[]
+  id               Int          @id @default(autoincrement())
+  image_url        String?
+  name             String
+  description      String?
+  chapters         Chapters[]
+  materials        Materials[]
+  starts_at        DateTime
+  ends_at          DateTime
+  categories       Categories[]
+  courseOwners     User[]       @relation("CoursesOwners")
+  enrolledStudents User[]       @relation("EnrolledCourses")
 }
 
 model Chapters {

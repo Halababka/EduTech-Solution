@@ -6,6 +6,7 @@ export class Users {
         try {
             user = await client.user.findUnique({
                 select: {
+                    id: true,
                     first_name: true,
                     last_name: true,
                     middle_name: true,

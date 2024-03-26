@@ -1,13 +1,13 @@
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import { s3 } from "../s3(1).js";
+import { s3 } from "../s3.js";
 
 export class FileController {
     async uploadFile(req, res) {
         const upload = multer({
             storage: multerS3({
                 s3: s3,
-                bucket: process.env.AWS_S3_BUCKET_NAME,
+                bucket: process.env.S3_BUCKET_NAME,
                 contentType: multerS3.AUTO_CONTENT_TYPE,
                 acl: 'public-read',
                 key: (req, file, cb) => {

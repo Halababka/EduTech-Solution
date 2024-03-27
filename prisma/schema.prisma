@@ -16,9 +16,8 @@ model User {
   password        String?
   about           String?
   role            Roles?      @relation(fields: [rolesId], references: [id])
-  group           Groups?     @relation(fields: [groupsId], references: [id])
-  Materials       Materials[]
-  groupsId        Int?
+  groups          Groups[]
+  materials       Materials[]
   rolesId         Int         @default(1)
   enrolledCourses Courses[]   @relation("EnrolledCourses")
   coursesOwned    Courses[]   @relation("CoursesOwners")
@@ -66,7 +65,7 @@ model Courses {
 model Chapters {
   id          Int         @id @default(autoincrement())
   name        String
-  description String
+  description String?
   unlocks_at  DateTime
   materials   Materials[]
   Courses     Courses?    @relation(fields: [coursesId], references: [id])
@@ -76,11 +75,11 @@ model Chapters {
 model Materials {
   id          Int        @id @default(autoincrement())
   name        String
-  description String
-  mime_type   String
+  description String?
+  mime_type   String?
   path        String
   owner       User       @relation(fields: [userId], references: [id])
-  size        Int
+  size        Int?
   created     DateTime   @default(now())
   chapters    Chapters[]
   courses     Courses[]

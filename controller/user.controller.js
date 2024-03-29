@@ -6,7 +6,17 @@ const db = new DB();
 export class UserController {
     async getAllUsers(req, res) {
         try {
-            const users = await client.user.findMany();
+            const users = await client.user.findMany({
+                select: {
+                    id: true,
+                    first_name: true,
+                    middle_name: true,
+                    last_name: true,
+                    username: true,
+                    about: true,
+                    rolesId: true
+                }
+            });
             res.json(users);
         } catch (error) {
             console.error("Error fetching all users:", error);

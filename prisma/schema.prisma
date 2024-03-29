@@ -8,19 +8,19 @@ datasource db {
 }
 
 model User {
-  id              Int         @id @default(autoincrement())
-  first_name      String
-  middle_name     String?
-  last_name       String
-  username        String      @unique
-  password        String?
-  about           String?
-  role            Roles?      @relation(fields: [rolesId], references: [id])
-  groups          Groups[]
-  materials       Materials[]
-  rolesId         Int         @default(1)
-  enrolledCourses Courses[]   @relation("EnrolledCourses")
-  coursesOwned    Courses[]   @relation("CoursesOwners")
+  id               Int         @id @default(autoincrement())
+  first_name       String
+  middle_name      String?
+  last_name        String
+  username         String      @unique
+  password         String?
+  about            String?
+  role             Roles       @relation(fields: [rolesId], references: [id])
+  materials        Materials[]
+  rolesId          Int         @default(1)
+  groups           Groups[]
+  enrolled_courses Courses[]   @relation("EnrolledCourses")
+  courses_owned    Courses[]   @relation("CoursesOwners")
 }
 
 model Roles {
@@ -37,9 +37,12 @@ model Permissions {
 }
 
 model Groups {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  users User[]
+  id           Int      @id @default(autoincrement())
+  full_name    String   @unique // Полное название группы
+  abbreviation String?  @map("abbr") // Сокращенное название группы
+  create_at    DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  users        User[]
 }
 
 model Categories {
@@ -49,17 +52,21 @@ model Categories {
 }
 
 model Courses {
-  id               Int          @id @default(autoincrement())
-  image_url        String?
-  name             String
-  description      String?
-  chapters         Chapters[]
-  materials        Materials[]
-  starts_at        DateTime
-  ends_at          DateTime
-  categories       Categories[]
-  courseOwners     User[]       @relation("CoursesOwners")
-  enrolledStudents User[]       @relation("EnrolledCourses")
+  id                Int          @id @default(autoincrement())
+  name              String
+  description       String?
+  image_url         String?
+  active            Boolean      @default(true)
+  chapters          Chapters[]
+  materials         Materials[]
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+  starts_at         DateTime
+  ends_at           DateTime?
+  categories        Categories[]
+  duration_days     Int? // Количество дней для освоения курса
+  course_owners     User[]       @relation("CoursesOwners")
+  enrolled_students User[]       @relation("EnrolledCourses")
 }
 
 model Chapters {
@@ -80,7 +87,8 @@ model Materials {
   path        String
   owner       User       @relation(fields: [userId], references: [id])
   size        Int?
-  created     DateTime   @default(now())
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
   chapters    Chapters[]
   courses     Courses[]
   userId      Int

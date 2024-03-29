@@ -6,7 +6,6 @@ export const usersData = [
         username: "ilya",
         password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Студент ВИТИ НИЯУ МИФИ. Учусь на 4 курсе",
-        groupsId: 1,
         rolesId: 3
     },
     {
@@ -16,7 +15,6 @@ export const usersData = [
         username: "ivan",
         password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Всем привет, я учусь в ВИТИ НИЯУ МИФИ",
-        groupsId: 2,
         rolesId: 1
     },
     {
@@ -26,7 +24,6 @@ export const usersData = [
         username: "petr",
         password: "$2b$10$LO8/zbvfiwuIMzdj0X12xeo3uzESsffHrFXlJxyQ9HDKH/UjYD1Kq",
         about: "Всем привет, я работаю преподавателем в ВИТИ НИЯУ МИФИ",
-        groupsId: 3,
         rolesId: 2
     }
 ];

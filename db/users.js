@@ -12,7 +12,7 @@ export class Users {
                     middle_name: true,
                     username: true,
                     about: true,
-                    group: true,
+                    groups: true,
                     role: {
                         include: {
                             permissions: true

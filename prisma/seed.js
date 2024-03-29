@@ -8,7 +8,6 @@ async function main() {
     console.log("🌱 Start seeding...");
 
     // Роли
-
     const roleUser = await prisma.roles.create({
         data: {
             name: "USER"
@@ -28,19 +27,16 @@ async function main() {
     });
 
     // Группы
-
     await prisma.groups.createMany({
         data: groupsData
     })
 
     // Юзеры
-
     await prisma.user.createMany({
         data: usersData
     });
 
     // Разрешения
-
     const permission1 = await prisma.permissions.create({
         data: {
             name: 'CREATE_COURSES',

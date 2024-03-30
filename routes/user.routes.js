@@ -16,4 +16,7 @@ router.get('/:userId/roles');
 router.get('/:userId/permissions');
 router.get('/:userId/favorites');
 router.get('/:userId/available-materials');
+router.post('/', userController.createUser)
+router.delete('/', userController.deleteUser)
+
 export default router;

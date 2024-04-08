@@ -94,3 +94,27 @@ model Materials {
   courses     Courses[]
   userId      Int
 }
+
+// Тестирование:
+
+model Subject {
+  id   Int    @id @default(autoincrement())
+  name String
+}
+
+model Question {
+  id   Int           @id @default(autoincrement())
+  name String
+  type QuestionTypes @default(ONE_ANSWER)
+}
+
+model Answer {
+  id   Int    @id @default(autoincrement())
+  name String
+}
+
+enum QuestionTypes {
+  ONE_ANSWER
+  MANY_ANSWERS
+  TEXT_ANSWER
+}

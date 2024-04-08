@@ -8,11 +8,11 @@
 npm install
 ```
 ```shell
-bun install
+npm run dev
 ```
 ### Bun
 ```shell
-npm run dev
+bun install
 ```
 ```shell
 bun run dev

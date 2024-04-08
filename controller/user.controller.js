@@ -47,12 +47,12 @@ export class UserController {
         try {
             const user = await client.user.findUnique({
                 where: {id: parseInt(userId)},
-                include: {enrolledCourses: true}
+                include: {enrolled_courses: true}
             });
             if (!user) {
                 return res.status(404).json({error: "User not found"});
             }
-            res.json({courses: user.enrolledCourses});
+            res.json({courses: user.enrolled_courses});
         } catch (error) {
             console.error("Error fetching courses for the user:", error);
             res.status(500).json({error: "Internal server error"});

@@ -6,6 +6,9 @@ const filesController = new FileController();
 const router = express.Router();
 
 router.use(authenticateToken)
-router.post('/upload', filesController.uploadFile);
+router.get('/', filesController.getAllFiles);
+router.get('/:fileId/download', filesController.downloadFile);
+router.post('/upload', filesController.uploadFiles);
+router.delete('/delete', filesController.deleteFiles);
 
 export default router;

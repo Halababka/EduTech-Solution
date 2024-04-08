@@ -55,7 +55,7 @@ model Courses {
   id                Int          @id @default(autoincrement())
   name              String
   description       String?
-  image_url         String?
+  image_url         String?      @default("https://s3.aeza.cloud/productive-girls/no_course_photo.png")
   active            Boolean      @default(true)
   chapters          Chapters[]
   materials         Materials[]
@@ -84,6 +84,7 @@ model Materials {
   name        String
   description String?
   mime_type   String?
+  key         String
   path        String
   owner       User       @relation(fields: [userId], references: [id])
   size        Int?

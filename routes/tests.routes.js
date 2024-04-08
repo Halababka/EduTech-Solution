@@ -9,9 +9,8 @@ router.use(authenticateToken)
 
 router.post('/subjects', testsController.createSubject)
 router.get('/subjects', testsController.getSubjects)
-router.get('/subjects/:id', testsController.getTest)
-router.put('/subjects/:id', testsController.getTest)
-router.delete('/subjects/:id', testsController.getTest)
+router.put('/subjects/:id', testsController.updateSubjects)
+// router.delete('/subjects/:id', testsController.getTest)
 
 
 // // /tests/

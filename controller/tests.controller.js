@@ -55,4 +55,42 @@ export class TestsController {
         const subjects = await client.subject.findMany()
         res.json(subjects);
     }
+
+    async updateSubjects(req, res) {
+        const {name} = req.body;
+        const id = parseInt(req.params.id);
+
+        let subject;
+        try {
+            subject = await client.subject.findUnique({
+                where: {
+                    id: id,
+                },
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        if (!subject) {
+            res.status(404).json({error: 'Такой темы нет'})
+            return
+        }
+
+        if (await isSubjectExist(res, name)) {
+            res.status(409).json({error: 'Тема с таким названием уже существует'})
+            return
+        }
+
+        subject = await client.subject.update({
+            where: {
+                id: id,
+            },
+            data: {
+                name: name,
+            },
+        })
+
+        res.json(subject)
+    }
 }

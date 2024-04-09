@@ -98,17 +98,16 @@ model Materials {
 // Тестирование:
 
 model Subject {
-  id       Int        @id @default(autoincrement())
-  name     String
-  Question Question[]
+  id        Int        @id @default(autoincrement())
+  name      String
+  questions Question[]
 }
 
 model Question {
-  id        Int           @id @default(autoincrement())
-  name      String
-  subject   Subject?      @relation(fields: [subjectId], references: [id])
-  type      QuestionTypes @default(ONE_ANSWER)
-  subjectId Int?
+  id       Int           @id @default(autoincrement())
+  name     String
+  type     QuestionTypes @default(ONE_ANSWER)
+  subjects Subject[]
 }
 
 model Answer {

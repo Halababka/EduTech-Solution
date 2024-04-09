@@ -5,8 +5,8 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "bun app.js",
+    "dev": "bun --watch app.js"
   },
   "keywords": [],
   "author": "",

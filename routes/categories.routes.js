@@ -22,5 +22,5 @@ router.get('/:id', categoriesController.getCategoryById);
 router.put('/', categoriesController.updateCategories);
 
 // Роут для удаления категорий
-router.delete('/categories', categoriesController.deleteCategories);
+router.delete('/', categoriesController.deleteCategories);
 export default router;

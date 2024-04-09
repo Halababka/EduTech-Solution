@@ -16,7 +16,14 @@ export class UserController {
                     last_name: true,
                     username: true,
                     about: true,
-                    rolesId: true
+                    rolesId: true,
+                    groups: {
+                        select: {
+                            id: true,
+                            full_name: true,
+                            abbreviation: true
+                        }
+                    }
                 }
             });
             res.json(users);
@@ -232,12 +239,12 @@ export class UserController {
                 return res.status(400).json({error: "User IDs array is empty"});
             }
             const existingUsers = await client.user.findMany({
-                where: { id: { in: userIds } },
+                where: {id: {in: userIds}}
             });
 
             if (existingUsers.length !== userIds.length) {
                 // Не все пользователи с указанными идентификаторами найдены
-                return res.status(404).json({ error: "One or more users not found" });
+                return res.status(404).json({error: "One or more users not found"});
             }
             // Удаляем пользователя из базы данных
             const deletedUsers = await client.user.deleteMany({
@@ -245,7 +252,7 @@ export class UserController {
             });
             if (deletedUsers.length === 0) {
                 // Ни один пользователь не был удален
-                return res.status(404).json({ error: "No users were deleted" });
+                return res.status(404).json({error: "No users were deleted"});
             }
 
             res.status(200).json({message: "Users deleted successfully", deletedUsers});

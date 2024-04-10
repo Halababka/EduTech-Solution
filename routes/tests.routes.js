@@ -12,6 +12,12 @@ router.get('/subjects', testsController.getSubjects)
 router.put('/subjects/:id', testsController.updateSubjects)
 // router.delete('/subjects/:id', testsController.getTest)
 
+router.post('/questions', testsController.createQuestion)
+router.get('/questions', testsController.getQuestion)
+router.put('/questions/:id', testsController.updateSubjects)
+// router.delete('/subjects/:id', testsController.getTest)
+
+
 
 // // /tests/
 // router.post('/', testsController.getTest)

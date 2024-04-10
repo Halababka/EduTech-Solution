@@ -19,6 +19,66 @@ export class TestsController {
         res.json(1);
     }
 
+    async getQuestion(req, res) {
+        const questions = await client.question.findMany({
+            include: {
+                subjects: true,
+            },
+        })
+        res.json(questions);
+    }
+
+    async createQuestion(req, res) {
+        const {text, subjects, type} = req.body;
+        const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'];
+        let transformedSubjects, finalType;
+
+        if (type) {
+            if (!allowedTypes.includes(type)) {
+                return res.status(400).json({error: `Тип ${type} не разрешен.`});
+            } else {
+                finalType = type
+            }
+        } else {
+            finalType = 'ONE_ANSWER'
+        }
+
+        if (!text) {
+            return res.status(400).json({error: 'Необходимо указать текст вопроса'});
+        }
+
+        if (typeof text !== 'string') {
+            return res.status(400).json({error: 'Текст вопроса должен быть строкой'});
+        }
+
+        if ((text.split(" ").join("")) === '') {
+            return res.status(400).json({error: 'Необходимо указать текст вопроса'})
+        }
+
+        // Проверка, что subjects является массивом
+        if (!Array.isArray(subjects)) {
+            return res.status(400).json({error: 'Темы вопроса должны быть массивом'});
+        }
+
+        if (!subjects) {
+            transformedSubjects = []
+        } else {
+            transformedSubjects = subjects.map(num => ({id: num}))
+        }
+
+        const question = await client.question.create({
+                data: {
+                    name: text,
+                    subjects: {
+                        connect: transformedSubjects,
+                    },
+                    type: finalType
+                },
+            })
+        ;
+        res.json(question);
+    }
+
     async createSubject(req, res) {
         const {name} = req.body;
 

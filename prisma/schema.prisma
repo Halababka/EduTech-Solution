@@ -61,8 +61,8 @@ model Courses {
   materials         Materials[]
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
-  starts_at         DateTime
-  ends_at           DateTime?
+  starts_at         DateTime     @db.Date @default(now())
+  ends_at           DateTime?    @db.Date
   categories        Categories[]
   duration_days     Int? // Количество дней для освоения курса
   course_owners     User[]       @relation("CoursesOwners")

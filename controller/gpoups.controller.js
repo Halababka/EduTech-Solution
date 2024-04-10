@@ -189,7 +189,7 @@ class GroupsController {
             const {name, abbreviation} = req.body;
 
             // Проверяем, что name и abbreviation не пустые
-            if (!name || !abbreviation) {
+            if (!name && !abbreviation) {
                 return res.status(400).json({error: "Name and abbreviation are required"});
             }
             // Проверяем, что группа с заданным ID существует

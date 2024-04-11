@@ -42,8 +42,8 @@ export class CoursesController {
         let newCourses;
 
         try {
-            name = name.trim()
-            description = description.trim()
+            name = name.trim();
+            description = description.trim();
 
             newCourses = await client.courses.create({
                 data: {
@@ -78,7 +78,7 @@ export class CoursesController {
                     //     }))
                     // },
                     starts_at: starts_at,
-                    ends_at: ends_at,
+                    ends_at: ends_at
                     // categories: null
                 }
             });
@@ -88,6 +88,60 @@ export class CoursesController {
         }
 
         res.json(newCourses);
+    }
+
+    async createCourse(req, res) {
+        try {
+            const {
+                name,
+                description,
+                imageUrl,
+                startsAt,
+                endsAt,
+                durationDays,
+                categories,
+                active,
+                chapters,
+                materials,
+                enrolledStudents,
+                courseOwners
+            } = req.body;
+
+            // Проверка наличия обязательных параметров
+            if (!name) {
+                return res.status(400).json({error: "Name is required"});
+            }
+
+            // Создание курса
+            const createdCourse = await client.courses.create({
+                data: {
+                    name,
+                    description,
+                    image_url: imageUrl,
+                    starts_at: startsAt,
+                    ends_at: endsAt,
+                    duration_days: durationDays,
+                    active,
+                    chapters: {createMany: {data: chapters}}, // Создаем главы курса
+                    materials: {connect: {id: parseInt(materials)}}, // Связываем с материалами
+                    enrolled_students: {connect: enrolledStudents.map(enrolledStudentsId => ({id: enrolledStudentsId}))}, // Связываем с записанными студентами
+                    course_owners: {connect: courseOwners.map(ownerId => ({id: ownerId}))}, // Связываем с владельцем курса
+                    categories: {connect: categories.map(categoryId => ({id: categoryId}))} // Связываем с категориями
+                },
+                include: {
+                    chapters: true,
+                    materials: true,
+                    enrolled_students: true,
+                    course_owners: true
+                }
+            });
+
+            // Отправка созданного курса в ответ
+            res.status(201).json(createdCourse);
+        } catch (error) {
+            console.error("Error creating course:", error);
+            res.status(500).json({error: "Error creating course"});
+        }
     }
 
     async deleteCourse(req, res) {

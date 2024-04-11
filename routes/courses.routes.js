@@ -7,7 +7,7 @@ import { authenticateToken } from "../middleware/authenticateToken.js";
 
 router.use(authenticateToken);
 router.get("/", coursesController.allCourses);
-router.post("/", coursesController.newCourse);
+router.post("/", coursesController.createCourse);
 router.get("/:id", coursesController.getCourse);
 router.delete("/:id", coursesController.deleteCourse);
 

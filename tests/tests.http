@@ -1,0 +1,14 @@
+### Auth
+POST http://127.0.0.1:8080/api/auth
+Content-Type: application/json
+
+{
+  "username": "ivan",
+  "password": "test"
+}
+
+### GET subjects
+GET http://127.0.0.1:8080/api/tests/subjects
+Accept: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzEyODQwOTUxfQ.X9mesYDqoLsKjRtUHWVbtQiv-NVM_4QyuSeLZpqEH4k
+

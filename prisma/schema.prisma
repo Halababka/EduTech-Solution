@@ -61,7 +61,7 @@ model Courses {
   materials         Materials[]
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
-  starts_at         DateTime     @db.Date @default(now())
+  starts_at         DateTime     @default(now()) @db.Date
   ends_at           DateTime?    @db.Date
   categories        Categories[]
   duration_days     Int? // Количество дней для освоения курса
@@ -105,14 +105,14 @@ model Subject {
 
 model Question {
   id       Int           @id @default(autoincrement())
-  name     String
+  text     String
   type     QuestionTypes @default(ONE_ANSWER)
   subjects Subject[]
 }
 
 model Answer {
   id   Int    @id @default(autoincrement())
-  name String
+  text String
 }
 
 enum QuestionTypes {

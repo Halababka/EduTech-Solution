@@ -14,7 +14,7 @@ router.put('/subjects/:id', testsController.updateSubjects)
 
 router.post('/questions', testsController.createQuestion)
 router.get('/questions', testsController.getQuestion)
-router.put('/questions/:id', testsController.updateSubjects)
+router.put('/questions/:id', testsController.updateQuestion)
 // router.delete('/subjects/:id', testsController.getTest)
 
 

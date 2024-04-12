@@ -1,7 +1,6 @@
 import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import typeCheck from "../utils/typeCheck.js";
-import {json} from "express";
 
 const isSubjectExist = async (res, name) => {
     try {

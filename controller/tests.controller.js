@@ -15,8 +15,7 @@ const isSubjectExist = async (res, name) => {
     }
 }
 
-const checkQuestionTypes = async (type) => {
-    const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'];
+const checkEnumTypes = async (type, allowedTypes) => {
     if (!allowedTypes.includes(type)) {
         return {error: `Тип ${type} не разрешен.`};
     } else {
@@ -27,6 +26,92 @@ const checkQuestionTypes = async (type) => {
 export class TestsController {
     async getTest(req, res) {
         res.json(1);
+    }
+
+    async createAnswer(req, res) {
+        const questionId = parseInt(req.params.questionId);
+        const {type, content, correct} = req.body;
+
+        let answers, finalType;
+
+        try {
+            answers = await client.question.findMany({
+                where:
+                    {
+                        id: questionId
+                    },
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+        
+        if (answers.length < 1) {
+            return res.status(404).json({error: "Вопрос не найден"})
+        }
+
+        if (!typeCheck(correct, 'boolean')) {
+            return res.status(400).json({error: 'Correct должен быть boolean'});
+        }
+
+        if (!content) {
+            return res.status(400).json({error: 'Контент не заполнен'});
+        }
+        if (!typeCheck(content, 'string')) {
+            return res.status(400).json({error: 'Контент должен быть строкой'});
+        }
+        if ((content.split(" ").join("")) === '') {
+            return res.status(400).json({error: 'Необходимо указать контент'})
+        }
+
+        if (type) {
+            const typeCheckResult = await checkEnumTypes(type, ['TEXT', 'IMAGE', 'RICH'])
+            if (typeCheckResult.error) {
+                return res.status(400).json({error: `Тип ${type} не разрешен.`});
+            } else {
+                finalType = type
+            }
+        } else {
+            finalType = 'TEXT'
+        }
+
+        try {
+            answers = await client.answer.create({
+                data: {
+                    content: content,
+                    type: finalType,
+                    correct: correct, // or true
+                    questionId: questionId
+                }
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+
+        res.json(answers)
+    }
+
+    async getAnswers(req, res) {
+        const questionId = parseInt(req.params.questionId);
+
+        let answers;
+
+        try {
+            answers = await client.answer.findMany({
+                where:
+                    {
+                        questionId: questionId
+                    },
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+
+        if (answers.length < 1) {
+            return res.status(404).json({error: "Вопрос не найден"})
+        }
+
+        return res.json(answers)
+
     }
 
     async createQuestion(req, res) {
@@ -44,7 +129,7 @@ export class TestsController {
         }
 
         if (type) {
-            const typeCheckResult = await checkQuestionTypes(type)
+            const typeCheckResult = await checkEnumTypes(type, ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'])
             if (typeCheckResult.error) {
                 return res.status(400).json({error: `Тип ${type} не разрешен.`});
             } else {
@@ -137,7 +222,7 @@ export class TestsController {
         }
 
         if (type) {
-            const typeCheckResult = await checkQuestionTypes(type)
+            const typeCheckResult = await checkEnumTypes(type, ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'])
             if (typeCheckResult.error) {
                 return res.status(400).json({error: `Тип ${type} не разрешен.`});
             }

@@ -1,9 +1,10 @@
 import express from 'express';
-import {TestsController} from '../controller/tests.controller.js';
+import {TestsController} from '../controller/tests.controller.ts';
 
 const testsController = new TestsController();
 const router = express.Router();
 import {authenticateToken} from '../middleware/authenticateToken.js'
+import {validateSubject} from '../middleware/validates/vaildateSubject.ts'
 
 router.use(authenticateToken)
 

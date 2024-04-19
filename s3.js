@@ -6,9 +6,9 @@ import multer from 'multer';
 import multerS3 from 'multer-s3';
 
 export const s3 = new AWS.S3({
-    endpoint: "https://s3.aeza.cloud/",
-    accessKeyId: "e32f7655-a850-4ec2-bc33-1ae24a5db424",
-    secretAccessKey: "d0396ae78485fa8542b260899ac4bace89cdee5982556fa745e291ed6d728de2",
+    endpoint: "s3.cloud.ru",
+    accessKeyId: "e1f21548-0137-4084-9bbb-e6ade093414f:54f685e00bbc37389f0458ac0b9a16c1",
+    secretAccessKey: "66d22e28263208bc4ea107c69f7294c8",
 });
 
 export const uploadFileToS3 = async (bucketName, filePath, fileContent) => {

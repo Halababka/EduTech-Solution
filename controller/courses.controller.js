@@ -36,7 +36,7 @@ export class CoursesController {
     }
 
     async newCourse(req, res) {
-        let {image_url, name, description, starts_at, ends_at, chapters, materials} = req.body;
+        let {image_url, name, description, starts_at, ends_at, sections, materials} = req.body;
         const user_id = req.user.id;
 
         let newCourses;
@@ -50,8 +50,8 @@ export class CoursesController {
                     image_url: image_url,
                     name: name,
                     description: description,
-                    chapters: {
-                        create: chapters.map(chapter => ({
+                    sections: {
+                        create: sections.map(chapter => ({
                             name: chapter.name,
                             description: chapter.description,
                             unlocks_at: chapter.unlocks_at,
@@ -98,11 +98,10 @@ export class CoursesController {
                 imageUrl,
                 startsAt,
                 endsAt,
-                durationDays,
+                durationHours,
                 categories,
                 active,
-                chapters,
-                materials,
+                sections,
                 enrolledStudents,
                 courseOwners
             } = req.body;
@@ -113,24 +112,40 @@ export class CoursesController {
             }
 
             // Создание курса
-            const createdCourse = await client.courses.create({
-                data: {
-                    name,
-                    description,
-                    image_url: imageUrl,
-                    starts_at: startsAt,
-                    ends_at: endsAt,
-                    duration_days: durationDays,
-                    active,
-                    chapters: {createMany: {data: chapters}}, // Создаем главы курса
-                    materials: {connect: {id: parseInt(materials)}}, // Связываем с материалами
-                    enrolled_students: {connect: enrolledStudents.map(enrolledStudentsId => ({id: enrolledStudentsId}))}, // Связываем с записанными студентами
-                    course_owners: {connect: courseOwners.map(ownerId => ({id: ownerId}))}, // Связываем с владельцем курса
-                    categories: {connect: categories.map(categoryId => ({id: categoryId}))} // Связываем с категориями
+            const courseData = {
+                name,
+                description,
+                image_url: imageUrl,
+                starts_at: startsAt,
+                ends_at: endsAt,
+                duration_hours: durationHours,
+                active,
+                sections: {
+                    createMany: {
+                        data: sections.map(section => ({
+                            name: section.name,
+                            description: section.description,
+                            unlocks_at: section.unlocks_at,
+                            section_content: section.sectionContent // Если свойство sectionContent существует, передайте его как есть
+                                ? {
+                                    create: section.sectionContent.map(content => ({
+                                        title: content.title,
+                                        content: content.content
+                                    }))
+                                }
+                                : undefined // Иначе передайте undefined
+                        }))
+                    }
                 },
+                enrolled_students: {connect: enrolledStudents.map(student => ({id: student}))},
+                course_owners: {connect: courseOwners.map(owner => ({id: owner}))},
+                categories: {connect: categories.map(category => ({id: category}))}
+            };
+
+            const createdCourse = await client.courses.create({
+                data: courseData,
                 include: {
-                    chapters: true,
-                    materials: true,
+                    sections: true,
                     enrolled_students: true,
                     course_owners: true
                 }
@@ -143,6 +158,8 @@ export class CoursesController {
             res.status(500).json({error: "Error creating course"});
         }
     }
+
+
 
     async deleteCourse(req, res) {
         const id = parseInt(req.params.id);

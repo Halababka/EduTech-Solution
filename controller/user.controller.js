@@ -17,6 +17,12 @@ export class UserController {
                     username: true,
                     about: true,
                     rolesId: true,
+                    role: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
                     groups: {
                         select: {
                             id: true,

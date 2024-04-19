@@ -43,6 +43,10 @@ export class AuthController {
         });
 
         if (user && await bcrypt.compare(password, user.password)) {
+            await client.user.update({
+                where: { id: user.id },
+                data: { lastLogin: new Date() },
+            })
             res.json({token: generateAuthToken(user.id)})
         } else {
             res.status(400).json({error: 'Неверное имя пользователя или пароль'})

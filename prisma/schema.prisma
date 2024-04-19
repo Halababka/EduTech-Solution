@@ -14,6 +14,9 @@ model User {
   last_name        String
   username         String      @unique
   password         String?
+  email            String?     @unique
+  lastLogin        DateTime?   @updatedAt
+  avatar           String?
   about            String?
   role             Roles       @relation(fields: [rolesId], references: [id])
   materials        Materials[]
@@ -42,6 +45,9 @@ model Groups {
   abbreviation String?  @map("abbr") // Сокращенное название группы
   create_at    DateTime @default(now())
   updated_at   DateTime @updatedAt
+  parent       Groups?  @relation("parentId", fields: [parentId], references: [id])
+  subgroups    Groups[] @relation("parentId")
+  parentId     Int?
   users        User[]
 }
 
@@ -57,42 +63,56 @@ model Courses {
   description       String?
   image_url         String?      @default("https://s3.aeza.cloud/productive-girls/no_course_photo.png")
   active            Boolean      @default(true)
-  chapters          Chapters[]
+  sections          Sections[]
   materials         Materials[]
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
   starts_at         DateTime     @default(now()) @db.Date
   ends_at           DateTime?    @db.Date
   categories        Categories[]
-  duration_days     Int? // Количество дней для освоения курса
+  duration_hours    Int? // Количество часов
   course_owners     User[]       @relation("CoursesOwners")
   enrolled_students User[]       @relation("EnrolledCourses")
 }
 
-model Chapters {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String?
-  unlocks_at  DateTime
-  materials   Materials[]
-  Courses     Courses?    @relation(fields: [coursesId], references: [id])
-  coursesId   Int?
+model Sections {
+  id              Int               @id @default(autoincrement())
+  name            String
+  description     String?
+  unlocks_at      DateTime
+  materials       Materials[]
+  parent          Sections?         @relation("parentId", fields: [parentId], references: [id])
+  subsections     Sections[]        @relation("parentId")
+  parentId        Int?
+  Courses         Courses?          @relation(fields: [coursesId], references: [id])
+  coursesId       Int?
+  section_content SectionContents[]
+}
+
+model SectionContents {
+  id         Int         @id @default(autoincrement())
+  title      String?
+  content    String?
+  materials  Materials[]
+  sectioins  Sections    @relation(fields: [sectionsId], references: [id])
+  sectionsId Int
 }
 
 model Materials {
-  id          Int        @id @default(autoincrement())
-  name        String
-  description String?
-  mime_type   String?
-  key         String
-  path        String
-  owner       User       @relation(fields: [userId], references: [id])
-  size        Int?
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  chapters    Chapters[]
-  courses     Courses[]
-  userId      Int
+  id               Int               @id @default(autoincrement())
+  name             String
+  description      String?
+  mime_type        String?
+  key              String
+  path             String
+  owner            User              @relation(fields: [userId], references: [id])
+  size             Int?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  sections         Sections[]
+  courses          Courses[]
+  userId           Int
+  section_contents SectionContents[]
 }
 
 // Тестирование:

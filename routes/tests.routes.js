@@ -17,6 +17,11 @@ router.get('/questions', testsController.getQuestion)
 router.put('/questions/:id', testsController.updateQuestion)
 // router.delete('/subjects/:id', testsController.getTest)
 
+router.post('/questions/:questionId/answers', testsController.createAnswer)
+router.get('/questions/:questionId/answers', testsController.getAnswers)
+router.put('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
+router.delete('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
+// router.delete('/subjects/:id', testsController.getTest)
 
 
 // // /tests/

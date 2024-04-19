@@ -108,15 +108,26 @@ model Question {
   text     String
   type     QuestionTypes @default(ONE_ANSWER)
   subjects Subject[]
+  answers  Answer[]
 }
 
 model Answer {
-  id   Int    @id @default(autoincrement())
-  text String
+  id         Int         @id @default(autoincrement())
+  content    String
+  type       AnswerTypes
+  correct    Boolean     @default(false)
+  Question   Question    @relation(fields: [questionId], references: [id])
+  questionId Int
 }
 
 enum QuestionTypes {
   ONE_ANSWER
   MANY_ANSWERS
   TEXT_ANSWER
+}
+
+enum AnswerTypes {
+  TEXT
+  IMAGE
+  RICH
 }

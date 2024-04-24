@@ -118,7 +118,7 @@ export class TestsController {
         res.json(question);
     }
 
-    async getQuestion(res: Response) {
+    async getQuestion(req: Request, res: Response) {
         const questions: Question[] = await client.question.findMany({
             include: {
                 subjects: true,
@@ -132,7 +132,6 @@ export class TestsController {
         const id = parseInt(req.params.id);
 
         const newData: any = {}
-
 
         if (text) {
             newData.text = text
@@ -189,7 +188,7 @@ export class TestsController {
         res.json(newSubject);
     }
 
-    async getSubjects(res: Response) {
+    async getSubjects(req: Request, res: Response) {
         let subjects: Subject[];
         try {
             subjects = await client.subject.findMany()
@@ -198,7 +197,7 @@ export class TestsController {
             return
         }
 
-        res.json(subjects);
+        return res.json(subjects);
     }
 
     async updateSubjects(req: Request, res: Response) {

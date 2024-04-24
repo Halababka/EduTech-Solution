@@ -1,23 +1,26 @@
 import express from 'express';
-import {TestsController} from '../controller/tests.controller.js';
+import {TestsController} from '../controller/tests.controller.ts';
 
 const testsController = new TestsController();
 const router = express.Router();
 import {authenticateToken} from '../middleware/authenticateToken.js'
+import {TestValidates} from '../middleware/validates/validateTests.ts'
+
+const testValidates = new TestValidates()
 
 router.use(authenticateToken)
 
-router.post('/subjects', testsController.createSubject)
+router.post('/subjects', testValidates.validateSubject, testsController.createSubject)
 router.get('/subjects', testsController.getSubjects)
-router.put('/subjects/:id', testsController.updateSubjects)
+router.put('/subjects/:id', testValidates.validateSubject, testsController.updateSubjects)
 // router.delete('/subjects/:id', testsController.getTest)
 
-router.post('/questions', testsController.createQuestion)
+router.post('/questions', await testValidates.vaildateQuestion, testsController.createQuestion)
 router.get('/questions', testsController.getQuestion)
-router.put('/questions/:id', testsController.updateQuestion)
+router.put('/questions/:id', await testValidates.vaildateQuestion, testsController.updateQuestion)
 // router.delete('/subjects/:id', testsController.getTest)
 
-router.post('/questions/:questionId/answers', testsController.createAnswer)
+router.post('/questions/:questionId/answers', testValidates.vaildateAnswers, testsController.createAnswer)
 router.get('/questions/:questionId/answers', testsController.getAnswers)
 router.put('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
 router.delete('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)

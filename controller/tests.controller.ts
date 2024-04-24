@@ -2,29 +2,124 @@ import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import {Request, Response} from 'express'
 
-import type {Subject} from '@prisma/client'
-
-
-const isSubjectExist = async (res, name) => {
-    try {
-        const results = await client.subject.findMany({
-            where: {
-                name: name,
-            },
-        });
-        return Boolean(results.length);
-    } catch (e) {
-        res.status(500).json({error: dbErrorsHandler(e)})
-    }
-}
+import type {Subject, Question, QuestionTypes, Answer, AnswerTypes} from '@prisma/client'
 
 export class TestsController {
-    async getTest(req: Request, res: Response) {
-        res.json(1);
+    async createAnswer(req: Request, res: Response) {
+        const questionId = parseInt(req.params.questionId);
+        const {type, content, correct} = req.body;
+
+        let questions: Question, finalType: AnswerTypes, answers: Answer;
+
+        try {
+            questions = await client.question.findUnique({
+                where:
+                    {
+                        id: questionId
+                    },
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+
+        if (!questions) {
+            return res.status(404).json({error: "Вопрос не найден"})
+        }
+
+        if (!content) {
+            return res.status(400).json({error: 'Контент не заполнен'});
+        }
+
+        if ((content.split(" ").join("")) === '') {
+            return res.status(400).json({error: 'Необходимо указать контент'})
+        }
+
+        finalType = type ? type : 'TEXT'
+
+        try {
+            answers = await client.answer.create({
+                data: {
+                    content: content,
+                    type: finalType,
+                    correct: correct,
+                    questionId: questionId
+                }
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+
+        res.json(answers)
     }
 
-    async getQuestion(req: Request, res: Response) {
-        const questions = await client.question.findMany({
+    async getAnswers(req: Request, res: Response) {
+        const questionId = parseInt(req.params.questionId);
+
+        let answers: Answer[];
+
+        try {
+            answers = await client.answer.findMany({
+                where:
+                    {
+                        questionId: questionId
+                    },
+            })
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+
+        if (answers.length < 1) {
+            return res.status(404).json({error: "Вопрос не найден"})
+        }
+
+        return res.json(answers)
+
+    }
+
+    async createQuestion(req: Request, res: Response) {
+        const {text, subjects, type} = req.body;
+        let transformedSubjects: Subject[], finalType: QuestionTypes;
+
+        if (!text) {
+            return res.status(400).json({error: 'Необходимо указать текст вопроса'});
+        }
+
+        finalType = type ? type : 'ONE_ANSWER'
+
+        if (!subjects) {
+            transformedSubjects = []
+        } else {
+            try {
+                const subjectCheck = await client.subject.findMany({
+                    where: {
+                        OR: subjects.map((num: number) => ({id: num}))
+                    },
+                });
+                if (subjectCheck.length !== subjects.length) {
+                    return res.status(400).json({error: "Темы, с указанными ID не существуют"})
+                } else {
+                    transformedSubjects = subjects.map((num: number) => ({id: num}))
+                }
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+        }
+
+        const question: Question = await client.question.create({
+            data: {
+                text: text,
+                subjects: {
+                    connect: transformedSubjects,
+                },
+                type: finalType
+            },
+        });
+        res.json(question);
+    }
+
+    async getQuestion(res: Response) {
+        const questions: Question[] = await client.question.findMany({
             include: {
                 subjects: true,
             },
@@ -32,76 +127,55 @@ export class TestsController {
         res.json(questions);
     }
 
-    async createQuestion(req: Request, res: Response) {
+    async updateQuestion(req: Request, res: Response) {
         const {text, subjects, type} = req.body;
-        const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'];
-        let transformedSubjects, finalType;
+        const id = parseInt(req.params.id);
+
+        const newData: any = {}
+
+
+        if (text) {
+            newData.text = text
+        }
 
         if (type) {
-            if (!allowedTypes.includes(type)) {
-                return res.status(400).json({error: `Тип ${type} не разрешен.`});
-            } else {
-                finalType = type
+            newData.type = type
+        }
+
+        if (subjects) {
+            try {
+                newData.subjects = {
+                    set: [...subjects.map((num: number) => ({id: num}))]
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
             }
-        } else {
-            finalType = 'ONE_ANSWER'
         }
 
-        if (!text) {
-            return res.status(400).json({error: 'Необходимо указать текст вопроса'});
+        if (Object.keys(newData).length === 0) {
+            return res.status(400).json({error: 'Нет данных для изменения'})
         }
 
-        if (typeof text !== 'string') {
-            return res.status(400).json({error: 'Текст вопроса должен быть строкой'});
-        }
+        const updatedQuestion = await client.question.update({
+            include: {
+                subjects: true
+            },
+            where: {id: id},
+            data: newData,
+        });
 
-        if ((text.split(" ").join("")) === '') {
-            return res.status(400).json({error: 'Необходимо указать текст вопроса'})
-        }
+        return res.json(updatedQuestion)
 
-        // Проверка, что subjects является массивом
-        if (!Array.isArray(subjects)) {
-            return res.status(400).json({error: 'Темы вопроса должны быть массивом'});
-        }
-
-        if (!subjects) {
-            transformedSubjects = []
-        } else {
-            transformedSubjects = subjects.map(num => ({id: num}))
-        }
-
-        const question = await client.question.create({
-                data: {
-                    name: text,
-                    subjects: {
-                        connect: transformedSubjects,
-                    },
-                    type: finalType
-                },
-            })
-        ;
-        res.json(question);
     }
 
     async createSubject(req: Request, res: Response) {
         const {name} = req.body as Subject;
 
-        if (!name) {
-            res.status(400).json({error: 'Необходимо указать название темы'})
-            return
+        if (!req.body.hasOwnProperty('name')) {
+            return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
         }
 
-        if ((name.split(" ").join("")) === '') {
-            res.status(400).json({error: 'Необходимо указать название темы'})
-            return
-        }
-
-        if (await isSubjectExist(res, name)) {
-            res.status(409).json({error: 'Такая тема уже существует'})
-            return
-        }
-
-        let newSubject;
+        let newSubject: Subject;
         try {
             newSubject = await client.subject.create({
                 data: {
@@ -115,8 +189,15 @@ export class TestsController {
         res.json(newSubject);
     }
 
-    async getSubjects(req: Request, res: Response) {
-        const subjects = await client.subject.findMany()
+    async getSubjects(res: Response) {
+        let subjects: Subject[];
+        try {
+            subjects = await client.subject.findMany()
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
         res.json(subjects);
     }
 
@@ -124,7 +205,7 @@ export class TestsController {
         const {name} = req.body;
         const id = parseInt(req.params.id);
 
-        let subject;
+        let subject: Subject;
         try {
             subject = await client.subject.findUnique({
                 where: {
@@ -141,19 +222,19 @@ export class TestsController {
             return
         }
 
-        if (await isSubjectExist(res, name)) {
-            res.status(409).json({error: 'Тема с таким названием уже существует'})
+        try {
+            subject = await client.subject.update({
+                where: {
+                    id: id,
+                },
+                data: {
+                    name: name,
+                },
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
             return
         }
-
-        subject = await client.subject.update({
-            where: {
-                id: id,
-            },
-            data: {
-                name: name,
-            },
-        })
 
         res.json(subject)
     }

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "bun app.js",
-    "dev": "tsx watch app.js"
+    "dev": "bun watch app.js"
   },
   "keywords": [],
   "author": "",
@@ -26,12 +26,10 @@
     "@prisma/client": "^5.8.0",
     "@types/express": "^4.17.21",
     "bcrypt": "^5.1.1",
-    "nodemon": "^3.1.0",
     "prisma": "^5.8.0",
-    "ts-node": "^10.9.2",
     "tsx": "^4.7.2"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.js"
+    "seed": "tsx prisma/seed.js"
   }
 }

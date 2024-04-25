@@ -5,8 +5,8 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "bun app.js",
-    "dev": "bun watch app.js"
+    "start": "tsx app.js",
+    "dev": "tsx --watch app.js"
   },
   "keywords": [],
   "author": "",

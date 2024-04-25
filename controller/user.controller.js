@@ -9,27 +9,8 @@ export class UserController {
     async getAllUsers(req, res) {
         try {
             const users = await client.user.findMany({
-                select: {
-                    id: true,
-                    first_name: true,
-                    middle_name: true,
-                    last_name: true,
-                    username: true,
-                    about: true,
-                    rolesId: true,
-                    role: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    },
-                    groups: {
-                        select: {
-                            id: true,
-                            full_name: true,
-                            abbreviation: true
-                        }
-                    }
+                include: {
+                    role: true, groups: true
                 }
             });
             res.json(users);
@@ -136,8 +117,13 @@ export class UserController {
                 const newUser = await client.user.create({
                     data: {
                         ...userData,
-                        password: hashedPassword
-
+                        password: hashedPassword,
+                        role: {
+                            connect: { id: userData.role.id } // Подключаем существующую роль по ее идентификатору
+                        },
+                        groups: {
+                            connect: userData.groups.map(group => ({ id: group.id })) // Подключаем существующие группы по их идентификаторам
+                        }
                     }
                 });
                 createdUsers.push(newUser);
@@ -161,9 +147,12 @@ export class UserController {
             // Получаем данные для обновления из тела запроса
             const userData = req.body;
 
+            // Удаляем id пользователя из данных для обновления, так как id не подлежит изменению
+            delete userData.id;
+
             // Проверяем, что данные отличаются от существующих данных в базе
             const existingUser = await client.user.findUnique({
-                where: {id: userId}
+                where: { id: userId }
             });
 
             const updatedFields = {};
@@ -174,13 +163,37 @@ export class UserController {
             }
 
             if (Object.keys(updatedFields).length === 0) {
-                return res.status(400).json({error: "No fields to update"});
+                return res.status(400).json({ error: "No fields to update" });
+            }
+
+            // Проверяем наличие и непустоту поля пароля
+            if (userData.password !== undefined && userData.password !== '') {
+                // Хэшируем пароль
+                const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+                // Обновляем поле пароля в данных для обновления
+                updatedFields.password = hashedPassword;
+            } else {
+                // Если поле пароля пустое, удаляем его из данных для обновления
+                delete updatedFields.password;
             }
 
             // Обновляем информацию о пользователе в базе данных
             const updatedUser = await client.user.update({
-                where: {id: userId},
-                data: updatedFields
+                where: { id: userId },
+                data: {
+                    ...updatedFields,
+                    // Используем connect для связи с существующей ролью по идентификатору
+                    role: {
+                        connect: { id: userData.role.id }
+                    },
+                    // Используем disconnect для отключения всех пользователей от групп
+                    groups: {
+                        // Удаляем текущие группы и связи с пользователем
+                        disconnect: [],
+                        // Передаем массив объектов в виде структуры GroupsUpdateManyWithoutUsersNestedInput
+                        connect: userData.groups.map(group => ({ id: group.id }))
+                    }
+                }
             });
 
             // Возвращаем успешный ответ с обновленными данными пользователя
@@ -188,9 +201,10 @@ export class UserController {
         } catch (error) {
             // Обрабатываем ошибку и возвращаем ее клиенту
             console.error("Error updating user:", error);
-            res.status(500).json({error: "Failed to update user"});
+            res.status(500).json({ error: "Failed to update user" });
         }
     }
+
 
     // Метод для смены пароля пользователя
     async changePassword(req, res) {

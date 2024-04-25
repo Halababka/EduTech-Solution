@@ -6,6 +6,7 @@ function roleFormat(obj) {
     return obj.role.permissions.map((permission) => {
         return {
             id: permission.id,
+            code: permission.code,
             name: permission.name,
         };
     });

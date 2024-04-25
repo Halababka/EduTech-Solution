@@ -10,19 +10,22 @@ async function main() {
     // Роли
     const roleUser = await prisma.roles.create({
         data: {
-            name: "USER"
+            code: "USER",
+            name: 'Пользователь',
         }
     });
 
     const roleTeacher = await prisma.roles.create({
         data: {
-            name: "TEACHER"
+            code: "TEACHER",
+            name: 'Преподаватель',
         }
     });
 
     const roleAdmin = await prisma.roles.create({
         data: {
-            name: "ADMIN"
+            code: "ADMIN",
+            name: 'Администратор',
         }
     });
 
@@ -37,9 +40,10 @@ async function main() {
     });
 
     // Разрешения
-    const permission1 = await prisma.permissions.create({
+    const permission1_1 = await prisma.permissions.create({
         data: {
-            name: 'CREATE_COURSES',
+            code: 'CREATE_COURSES',
+            name: 'Создание курсов',
             roles: {
                 connect: [
                     { id: roleAdmin.id },
@@ -48,9 +52,10 @@ async function main() {
             }
         }
     });
-    const permission2 = await prisma.permissions.create({
+    const permission1_2 = await prisma.permissions.create({
         data: {
-            name: 'READ_COURSES',
+            code: 'READ_COURSES',
+            name: 'Чтение курсов',
             roles: {
                 connect: [
                     { id: roleAdmin.id },
@@ -60,9 +65,10 @@ async function main() {
             }
         }
     });
-    const permission3 = await prisma.permissions.create({
+    const permission1_3 = await prisma.permissions.create({
         data: {
-            name: 'UPDATE_COURSES',
+            code: 'UPDATE_COURSES',
+            name: 'Обновление курсов',
             roles: {
                 connect: [
                     { id: roleAdmin.id },
@@ -71,9 +77,22 @@ async function main() {
             }
         }
     });
-    const permission4 = await prisma.permissions.create({
+    const permission1_4 = await prisma.permissions.create({
         data: {
-            name: 'CRUD_USERS',
+            code: 'DELETE_COURSES',
+            name: 'Удаление курсов',
+            roles: {
+                connect: [
+                    { id: roleAdmin.id },
+                    { id: roleTeacher.id }
+                ]
+            }
+        }
+    });
+    const permission2_1 = await prisma.permissions.create({
+        data: {
+            code: 'CRUD_USERS',
+            name: 'Круд пользователей',
             roles: {
                 connect: [
                     { id: roleAdmin.id }
@@ -81,9 +100,10 @@ async function main() {
             }
         }
     });
-    const permission5 = await prisma.permissions.create({
+    const permission3_1 = await prisma.permissions.create({
         data: {
-            name: 'CRUD_ROLES',
+            code: 'CRUD_ROLES',
+            name: 'Круд ролей',
             roles: {
                 connect: [
                     { id: roleAdmin.id }
@@ -91,9 +111,10 @@ async function main() {
             }
         }
     });
-    const permission6 = await prisma.permissions.create({
+    const permission4_1 = await prisma.permissions.create({
         data: {
-            name: 'CRUD_GROUPS',
+            code: 'CRUD_GROUPS',
+            name: 'Круд групп',
             roles: {
                 connect: [
                     { id: roleAdmin.id }

@@ -28,6 +28,7 @@ model User {
 
 model Roles {
   id          Int           @id @default(autoincrement())
+  code        String        @unique
   name        String        @unique
   User        User[]
   permissions Permissions[]
@@ -35,6 +36,7 @@ model Roles {
 
 model Permissions {
   id    Int     @id @default(autoincrement())
+  code  String  @unique
   name  String  @unique
   roles Roles[]
 }
@@ -61,7 +63,7 @@ model Courses {
   id                Int          @id @default(autoincrement())
   name              String
   description       String?
-  image_url         String?      @default("https://s3.aeza.cloud/productive-girls/no_course_photo.png")
+  image_url         String?
   active            Boolean      @default(true)
   sections          Sections[]
   materials         Materials[]

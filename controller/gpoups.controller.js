@@ -224,6 +224,44 @@ class GroupsController {
             res.status(500).json({error: "Internal server error"});
         }
     }
+
+    async deleteGroups(req,res) {
+        try {
+            const groupIds = req.body.groupIds;
+
+            // Проверяем, что groupIds является массивом
+            if (!Array.isArray(groupIds)) {
+                return res.status(400).json({error: "Group IDs must be an array"});
+            }
+
+            // Проверяем, что массив не пустой
+            if (groupIds.length === 0) {
+                return res.status(400).json({error: "Group IDs array is empty"});
+            }
+            const existingUsers = await client.groups.findMany({
+                where: {id: {in: groupIds}}
+            });
+
+            if (existingUsers.length !== groupIds.length) {
+                // Не все пользователи с указанными идентификаторами найдены
+                return res.status(404).json({error: "One or more groups not found"});
+            }
+            // Удаляем пользователя из базы данных
+            const deletedGroups = await client.groups.deleteMany({
+                where: {id: {in: groupIds}}
+            });
+            if (deletedGroups.length === 0) {
+                // Ни один пользователь не был удален
+                return res.status(404).json({error: "No groups were deleted"});
+            }
+
+            res.status(200).json({message: "Groups deleted successfully", deletedGroups});
+
+        } catch (error) {
+            console.error("Error deleting groups:", error);
+            res.status(500).json({error: "Failed to delete groups"});
+        }
+    }
 }
 
 export default new GroupsController();

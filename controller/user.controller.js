@@ -114,17 +114,20 @@ export class UserController {
 
                 const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
 
+                // Проверяем наличие полей role и groups
+                if (userData.role) {
+                    userData.role = {
+                        connect: { id: userData.role.id }
+                    };
+                }
+                if (userData.groups) {
+                    userData.groups = {
+                        connect: userData.groups.map(group => ({ id: group.id }))
+                    };
+                }
+
                 const newUser = await client.user.create({
-                    data: {
-                        ...userData,
-                        password: hashedPassword,
-                        role: {
-                            connect: { id: userData.role.id } // Подключаем существующую роль по ее идентификатору
-                        },
-                        groups: {
-                            connect: userData.groups.map(group => ({ id: group.id })) // Подключаем существующие группы по их идентификаторам
-                        }
-                    }
+                    data: userData
                 });
                 createdUsers.push(newUser);
             }
@@ -176,7 +179,7 @@ export class UserController {
                 // Если поле пароля пустое, удаляем его из данных для обновления
                 delete updatedFields.password;
             }
-
+            console.log(userData.groups)
             // Обновляем информацию о пользователе в базе данных
             const updatedUser = await client.user.update({
                 where: { id: userId },
@@ -189,7 +192,7 @@ export class UserController {
                     // Используем disconnect для отключения всех пользователей от групп
                     groups: {
                         // Удаляем текущие группы и связи с пользователем
-                        disconnect: [],
+                        set: [],
                         // Передаем массив объектов в виде структуры GroupsUpdateManyWithoutUsersNestedInput
                         connect: userData.groups.map(group => ({ id: group.id }))
                     }

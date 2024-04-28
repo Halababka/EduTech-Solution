@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use(authenticateToken)
 router.get('/', groupsController.getAllGroups)
+router.get('/allUsers', groupsController.getAllGroupsWithUsers)
 router.get('/:groupId',groupsController.getGroupById)
 router.get('/:groupId/users', groupsController.getUsersInGroup)
 router.post('/', groupsController.createGroup)

@@ -12,6 +12,29 @@ class GroupsController {
         }
     }
 
+    async getAllGroupsWithUsers(req, res) {
+        try {
+            const groups = await client.groups.findMany({
+                include: {
+                    users: {
+                        select: {
+                            id: true,
+                            first_name: true,
+                            middle_name: true,
+                            last_name: true,
+                            username: true,
+                            about: true,
+                        }
+                    }
+                }
+            });
+            res.json(groups);
+        } catch (error) {
+            console.error("Error fetching all groups:", error);
+            res.status(500).json({error: "Internal server error"});
+        }
+    }
+
     async getGroupById(req, res) {
         const {groupId} = req.params;
         try {
@@ -59,14 +82,16 @@ class GroupsController {
 
     async createGroup(req, res) {
         try {
-            const {name} = req.body;
-            const {abbreviation} = req.body;
-            if (!name || typeof name !== "string") {
+            const {full_name, abbreviation} = req.body;
+
+            console.log(full_name);
+
+            if (!full_name || typeof full_name !== "string") {
                 return res.status(400).json({error: "Name must be a non-empty string"});
             }
             // Проверяем, существует ли уже группа с таким названием
             const existingGroup = await client.groups.findUnique({
-                where: {full_name: name}
+                where: {full_name: full_name}
             });
 
             if (existingGroup) {
@@ -74,7 +99,7 @@ class GroupsController {
             }
             const group = await client.groups.create({
                 data: {
-                    full_name: name,
+                    full_name: full_name,
                     abbreviation: abbreviation
                 }
             });
@@ -112,19 +137,34 @@ class GroupsController {
             if (newUserIds.length === 0) {
                 return res.status(200).json({message: "Users are already in the group"});
             }
-            // Assuming userIds is an array of user ids to add to the group
-            const addUsersPromises = newUserIds.map(async (userId) => {
-                await client.groups.update({
-                    where: {id: parseInt(groupId)},
-                    data: {
-                        users: {
-                            connect: {id: parseInt(userId)}
-                        }
-                    }
-                });
+
+            // Проверка, что все переданные userIds существуют в базе данных
+            const existingUsers = await client.user.findMany({
+                where: {id: {in: newUserIds}},
+                select: {id: true}
             });
 
-            await Promise.all(addUsersPromises);
+            const existingUserIdsSet = new Set(existingUsers.map(user => user.id));
+
+            // Отфильтровать только существующих пользователей из новых userIds
+            const validNewUserIds = newUserIds.filter(userId => existingUserIdsSet.has(userId));
+
+            // Проверить, есть ли какие-либо недопустимые пользователи
+            const invalidUserIds = newUserIds.filter(userId => !existingUserIdsSet.has(userId));
+
+            if (invalidUserIds.length > 0) {
+                console.warn(`Invalid user ids: ${invalidUserIds.join(", ")}`);
+            }
+
+            // Обновить группу, добавив только существующих пользователей
+            await client.groups.update({
+                where: {id: parseInt(groupId)},
+                data: {
+                    users: {
+                        connect: validNewUserIds.map(userId => ({id: userId}))
+                    }
+                }
+            });
 
             res.status(200).json({message: "Users added to the group successfully"});
         } catch (error) {
@@ -186,34 +226,34 @@ class GroupsController {
     async updateGroup(req, res) {
         try {
             const {groupId} = req.params;
-            const {name, abbreviation} = req.body;
+            const {full_name, abbreviation} = req.body;
 
             // Проверяем, что name и abbreviation не пустые
-            if (!name && !abbreviation) {
+            if (!full_name && !abbreviation) {
                 return res.status(400).json({error: "Name and abbreviation are required"});
             }
             // Проверяем, что группа с заданным ID существует
             const existingGroup = await client.groups.findUnique({
-                where: { id: parseInt(groupId) },
+                where: {id: parseInt(groupId)}
             });
 
             if (!existingGroup) {
-                return res.status(404).json({ error: 'Group not found' });
+                return res.status(404).json({error: "Group not found"});
             }
             // Получаем текущие данные о группе
             const currentGroup = await client.groups.findUnique({
-                where: { id: parseInt(groupId) },
+                where: {id: parseInt(groupId)}
             });
 
             // Проверяем, если переданные данные совпадают с текущими данными
-            if (currentGroup.full_name === name && currentGroup.abbreviation === abbreviation) {
-                return res.status(400).json({ error: 'Group data is the same as the current data' });
+            if (currentGroup.full_name === full_name && currentGroup.abbreviation === abbreviation) {
+                return res.status(400).json({error: "Group data is the same as the current data"});
             }
             // Обновляем группу в БД
             const updatedGroup = await client.groups.update({
                 where: {id: parseInt(groupId)},
                 data: {
-                    full_name: name,
+                    full_name: full_name,
                     abbreviation: abbreviation
                 }
             });
@@ -225,7 +265,7 @@ class GroupsController {
         }
     }
 
-    async deleteGroups(req,res) {
+    async deleteGroups(req, res) {
         try {
             const groupIds = req.body.groupIds;
 

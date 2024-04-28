@@ -45,7 +45,7 @@ model Groups {
   id           Int      @id @default(autoincrement())
   full_name    String   @unique // Полное название группы
   abbreviation String?  @map("abbr") // Сокращенное название группы
-  create_at    DateTime @default(now())
+  created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
   parent       Groups?  @relation("parentId", fields: [parentId], references: [id])
   subgroups    Groups[] @relation("parentId")

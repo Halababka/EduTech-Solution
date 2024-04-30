@@ -123,6 +123,22 @@ model Subject {
   id        Int        @id @default(autoincrement())
   name      String
   questions Question[]
+  Topic     Topic?     @relation(fields: [topicId], references: [id])
+  topicId   Int?
+}
+
+model Topic {
+  id       Int       @id @default(autoincrement())
+  name     String
+  subjects Subject[]
+  Folder   Folder?   @relation(fields: [folderId], references: [id])
+  folderId Int?
+}
+
+model Folder {
+  id     Int     @id @default(autoincrement())
+  name   String
+  topics Topic[]
 }
 
 model Question {

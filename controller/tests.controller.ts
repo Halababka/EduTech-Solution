@@ -2,7 +2,7 @@ import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import {Request, Response} from 'express'
 
-import type {Subject, Question, QuestionTypes, Answer, AnswerTypes} from '@prisma/client'
+import type {Subject, Question, QuestionTypes, Answer, AnswerTypes, Topic, Folder} from '@prisma/client'
 
 export class TestsController {
     async createAnswer(req: Request, res: Response) {
@@ -168,18 +168,40 @@ export class TestsController {
     }
 
     async createSubject(req: Request, res: Response) {
-        const {name} = req.body as Subject;
+        const {name, topicId} = req.body as Subject;
 
         if (!req.body.hasOwnProperty('name')) {
             return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
         }
 
+        const data = {
+            name: name
+        }
+
+        if (topicId) {
+            data['topicId'] = topicId
+
+            let result: Topic;
+            try {
+                result = await client.topic.findUnique({
+                    where: {
+                        id: topicId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Topic не найден'})
+            }
+        }
+
+
         let newSubject: Subject;
         try {
             newSubject = await client.subject.create({
-                data: {
-                    name: name
-                },
+                data: data,
             });
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -201,7 +223,7 @@ export class TestsController {
     }
 
     async updateSubjects(req: Request, res: Response) {
-        const {name} = req.body;
+        const {name, topicId} = req.body as Subject;
         const id = parseInt(req.params.id);
 
         let subject: Subject;
@@ -221,14 +243,36 @@ export class TestsController {
             return
         }
 
+        const data = {}
+        if (name) {
+            data['name'] = name
+        }
+
+        if (topicId) {
+            data['topicId'] = topicId
+
+            let result: Topic;
+            try {
+                result = await client.topic.findUnique({
+                    where: {
+                        id: topicId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Topic не найден'})
+            }
+        }
+
         try {
             subject = await client.subject.update({
                 where: {
                     id: id,
                 },
-                data: {
-                    name: name,
-                },
+                data: data,
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -237,4 +281,191 @@ export class TestsController {
 
         res.json(subject)
     }
+
+    async createTopic(req: Request, res: Response) {
+        const {name, folderId} = req.body as Topic;
+
+        if (!req.body.hasOwnProperty('name')) {
+            return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
+        }
+
+        const data = {
+            name: name
+        }
+
+        if (folderId) {
+            data['folderId'] = folderId
+
+            let result: Folder;
+            try {
+                result = await client.folder.findUnique({
+                    where: {
+                        id: folderId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Folder не найден'})
+            }
+        }
+
+
+        let newSubject: Subject;
+        try {
+            newSubject = await client.subject.create({
+                data: data,
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+        res.json(newSubject);
+    }
+
+    async getTopics(req: Request, res: Response) {
+        let topics: Topic[];
+        try {
+            topics = await client.topic.findMany()
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(topics);
+    }
+
+    async updateTopic(req: Request, res: Response) {
+        const {name, folderId} = req.body as Topic;
+        const id = parseInt(req.params.id);
+
+        let topic: Topic;
+        try {
+            topic = await client.topic.findUnique({
+                where: {
+                    id: id,
+                },
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        if (!topic) {
+            res.status(404).json({error: 'Такой темы нет'})
+            return
+        }
+
+        const data = {}
+        if (name) {
+            data['name'] = name
+        }
+
+        if (folderId) {
+            data['folderId'] = folderId
+
+            let result: Folder;
+            try {
+                result = await client.folder.findUnique({
+                    where: {
+                        id: folderId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Folder не найден'})
+            }
+        }
+
+        try {
+            topic = await client.topic.update({
+                where: {
+                    id: id,
+                },
+                data: data,
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        res.json(topic)
+    }
+
+    async createFolder(req: Request, res: Response) {
+        const {name} = req.body as Folder;
+
+        if (!req.body.hasOwnProperty('name')) {
+            return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
+        }
+
+        let newFolder: Folder;
+        try {
+            newFolder = await client.subject.create({
+                data: {
+                    name: name
+                },
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+        res.json(newFolder);
+    }
+
+    async getFolders(req: Request, res: Response) {
+        let folders: Folder[];
+        try {
+            folders = await client.folder.findMany()
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(folders);
+    }
+
+    async updateFolder(req: Request, res: Response) {
+        const {name} = req.body as Folder;
+        const id = parseInt(req.params.id);
+
+        let folder: Folder;
+        try {
+            folder = await client.folder.findUnique({
+                where: {
+                    id: id,
+                },
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        if (!folder) {
+            res.status(404).json({error: 'Такой папки нет'})
+            return
+        }
+
+        try {
+            folder = await client.folder.update({
+                where: {
+                    id: id,
+                },
+                data: {
+                    name: name
+                },
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(folder)
+    }
+
 }

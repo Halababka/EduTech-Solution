@@ -1,4 +1,4 @@
-import type {Question, QuestionTypes, Subject} from '@prisma/client'
+import type {Question, QuestionTypes, Subject, Topic, Folder} from '@prisma/client'
 import {Request, Response} from 'express'
 import {client} from '../../db.js'
 import dbErrorsHandler from "../../utils/dbErrorsHandler.js";
@@ -9,34 +9,55 @@ interface QuestionRequestBody {
     type: QuestionTypes;
 }
 
-const isSubjectExist = async (res: Response, name: string) => {
-    try {
-        const results = await client.subject.findMany({
-            where: {
-                name: name,
-            },
-        });
-        return Boolean(results.length);
-    } catch (e) {
-        res.status(500).json({error: dbErrorsHandler(e)})
-    }
-}
-
 export class TestValidates {
     async validateSubject(req: Request, res: Response, next: Function) {
-        const {name} = req.body as Subject;
-
+        const {name, topicId} = req.body as Subject;
         if (req.body.hasOwnProperty('name')) {
-            if (!name || typeof name !== 'string') {
-                return res.status(400).json({message: 'Необходимо указать название темы'});
+            if (typeof name !== 'string') {
+                return res.status(400).json({message: 'Название должно быть строкой'});
             }
-
             if (name.length < 3) {
-                return res.status(400).json({message: 'Название темы слишком короткое'});
+                return res.status(400).json({message: 'Название слишком короткое'});
             }
+        }
 
-            if (await isSubjectExist(res, name)) {
-                return res.status(409).json({error: 'Такая тема уже существует'})
+        if (req.body.hasOwnProperty('topicId')) {
+            if (typeof topicId !== 'number') {
+                return res.status(400).json({message: 'topicId должно быть числом'});
+            }
+        }
+
+        next()
+    }
+
+    async validateTopic(req: Request, res: Response, next: Function) {
+        const {name, folderId} = req.body as Topic;
+        if (req.body.hasOwnProperty('name')) {
+            if (typeof name !== 'string') {
+                return res.status(400).json({message: 'Название должно быть строкой'});
+            }
+            if (name.length < 3) {
+                return res.status(400).json({message: 'Название слишком короткое'});
+            }
+        }
+
+        if (req.body.hasOwnProperty('folderId')) {
+            if (typeof folderId !== 'number') {
+                return res.status(400).json({message: 'folderId должно быть числом'});
+            }
+        }
+
+        next()
+    }
+
+    async validateFolder(req: Request, res: Response, next: Function) {
+        const {name} = req.body as Folder;
+        if (req.body.hasOwnProperty('name')) {
+            if (typeof name !== 'string') {
+                return res.status(400).json({message: 'Название должно быть строкой'});
+            }
+            if (name.length < 3) {
+                return res.status(400).json({message: 'Название слишком короткое'});
             }
         }
 

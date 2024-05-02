@@ -147,6 +147,7 @@ model Question {
   type     QuestionTypes @default(ONE_ANSWER)
   subjects Subject[]
   answers  Answer[]
+  level    Int?
 }
 
 model Answer {

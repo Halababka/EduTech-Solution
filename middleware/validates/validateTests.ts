@@ -7,6 +7,7 @@ interface QuestionRequestBody {
     text: string;
     subjects: number[];
     type: QuestionTypes;
+    level: number;
 }
 
 export class TestValidates {
@@ -65,7 +66,7 @@ export class TestValidates {
     }
 
     async vaildateQuestion(req: Request, res: Response, next: Function) {
-        const {text, subjects, type}: QuestionRequestBody = req.body;
+        const {text, subjects, type, level}: QuestionRequestBody = req.body;
         const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER']
         const id: number = parseInt(req.params.id);
 
@@ -80,6 +81,11 @@ export class TestValidates {
 
             if (text.split(" ").join("").length < 3) {
                 return res.status(400).json({message: 'Вопрос слишком короткий'});
+            }
+        }
+        if (level) {
+            if (typeof level !== 'number') {
+                return res.status(400).json({message: 'Сложность вопроса должен быть целым числом'});
             }
         }
 

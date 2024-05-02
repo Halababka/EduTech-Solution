@@ -77,7 +77,7 @@ export class TestsController {
     }
 
     async createQuestion(req: Request, res: Response) {
-        const {text, subjects, type} = req.body;
+        const {text, subjects, type, level} = req.body;
         let transformedSubjects: Subject[], finalType: QuestionTypes;
 
         if (!text) {
@@ -105,15 +105,16 @@ export class TestsController {
                 return
             }
         }
-
-        const question: Question = await client.question.create({
-            data: {
-                text: text,
-                subjects: {
-                    connect: transformedSubjects,
-                },
-                type: finalType
+        const data = {
+            text: text,
+            subjects: {
+                connect: transformedSubjects,
             },
+            type: finalType
+        }
+        if (level) data['level'] = level
+        const question: Question = await client.question.create({
+            data: data,
         });
         res.json(question);
     }
@@ -128,7 +129,7 @@ export class TestsController {
     }
 
     async updateQuestion(req: Request, res: Response) {
-        const {text, subjects, type} = req.body;
+        const {text, subjects, type, level} = req.body;
         const id = parseInt(req.params.id);
 
         const newData: any = {}
@@ -139,6 +140,10 @@ export class TestsController {
 
         if (type) {
             newData.type = type
+        }
+
+        if (level) {
+            newData.level = level
         }
 
         if (subjects) {

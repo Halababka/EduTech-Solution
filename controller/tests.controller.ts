@@ -288,7 +288,7 @@ export class TestsController {
     }
 
     async createTopic(req: Request, res: Response) {
-        const {name, folderId} = req.body as Topic;
+        const {name, folderId, subjects} = req.body;
 
         if (!req.body.hasOwnProperty('name')) {
             return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
@@ -298,6 +298,10 @@ export class TestsController {
             name: name
         }
 
+        if (subjects) {
+            data['subjects'] = {};
+            data['subjects']['connect'] = subjects.map((num: number) => ({id: num}))
+        }
         if (folderId) {
             data['folderId'] = folderId
 
@@ -317,17 +321,19 @@ export class TestsController {
             }
         }
 
-
-        let newSubject: Subject;
+        let newTopic: Topic;
         try {
-            newSubject = await client.subject.create({
+            newTopic = await client.topic.create({
                 data: data,
+                include: {
+                    subjects: true
+                }
             });
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return
         }
-        res.json(newSubject);
+        res.json(newTopic);
     }
 
     async getTopics(req: Request, res: Response) {
@@ -343,7 +349,7 @@ export class TestsController {
     }
 
     async updateTopic(req: Request, res: Response) {
-        const {name, folderId} = req.body as Topic;
+        const {name, folderId, subjects} = req.body;
         const id = parseInt(req.params.id);
 
         let topic: Topic;
@@ -366,6 +372,11 @@ export class TestsController {
         const data = {}
         if (name) {
             data['name'] = name
+        }
+
+        if (subjects) {
+            data['subjects'] = {};
+            data['subjects']['connect'] = subjects.map((num: number) => ({id: num}))
         }
 
         if (folderId) {
@@ -393,6 +404,9 @@ export class TestsController {
                     id: id,
                 },
                 data: data,
+                include: {
+                    subjects: true
+                }
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})

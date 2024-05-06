@@ -115,6 +115,9 @@ export class TestsController {
         if (level) data['level'] = level
         const question: Question = await client.question.create({
             data: data,
+            include: {
+                subjects: true
+            }
         });
         res.json(question);
     }

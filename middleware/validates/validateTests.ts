@@ -52,7 +52,27 @@ export class TestValidates {
     }
 
     async validateFolder(req: Request, res: Response, next: Function) {
-        const {name} = req.body as Folder;
+        const {name, topics} = req.body;
+
+        if (req.body.hasOwnProperty('topics')) {
+            if (!Array.isArray(topics) || !topics.every(el => typeof el === "number")) {
+                return res.status(400).json({error: `Темы должны быть массивом и содержать ID тем.`});
+            }
+
+            try {
+                const topicsCheck = await client.topic.findMany({
+                    where: {
+                        OR: topics.map(num => ({id: num}))
+                    },
+                });
+                if (topicsCheck.length !== topics.length) {
+                    return res.status(400).json({error: "Одна или несколько указанных тем не существуют"})
+                }
+            } catch (e) {
+                return res.status(500).json({error: dbErrorsHandler(e)})
+            }
+        }
+
         if (req.body.hasOwnProperty('name')) {
             if (typeof name !== 'string') {
                 return res.status(400).json({message: 'Название должно быть строкой'});

@@ -403,18 +403,28 @@ export class TestsController {
     }
 
     async createFolder(req: Request, res: Response) {
-        const {name} = req.body as Folder;
+        const {name, topics} = req.body;
 
         if (!req.body.hasOwnProperty('name')) {
             return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
         }
 
+        const data = {
+            name: name
+        }
+
+        if (topics) {
+            data['topics'] = {};
+            data['topics']['connect'] = topics.map((num: number) => ({id: num}))
+        }
+
         let newFolder: Folder;
         try {
-            newFolder = await client.subject.create({
-                data: {
-                    name: name
-                },
+            newFolder = await client.folder.create({
+                data: data,
+                include: {
+                    topics: true,
+                }
             });
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -426,7 +436,11 @@ export class TestsController {
     async getFolders(req: Request, res: Response) {
         let folders: Folder[];
         try {
-            folders = await client.folder.findMany()
+            folders = await client.folder.findMany({
+                include: {
+                    topics: true
+                }
+            })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return
@@ -436,7 +450,7 @@ export class TestsController {
     }
 
     async updateFolder(req: Request, res: Response) {
-        const {name} = req.body as Folder;
+        const {name, topics} = req.body;
         const id = parseInt(req.params.id);
 
         let folder: Folder;
@@ -456,14 +470,24 @@ export class TestsController {
             return
         }
 
+        const data = {
+            name: name
+        }
+
+        if (topics) {
+            data['topics'] = {};
+            data['topics']['connect'] = topics.map((num: number) => ({id: num}))
+        }
+
         try {
             folder = await client.folder.update({
                 where: {
                     id: id,
                 },
-                data: {
-                    name: name
-                },
+                data: data,
+                include: {
+                    topics: true,
+                }
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})

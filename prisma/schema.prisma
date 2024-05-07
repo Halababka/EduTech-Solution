@@ -190,6 +190,7 @@ model TestSettings {
   attemptsCount     Int              @default(1)
   assessmentMethod  AssessmentMethod @default(STATISTICAL)
   initialDifficulty Int?
+  TestAssign        TestAssign[]
 }
 
 model TestAssign {
@@ -199,6 +200,8 @@ model TestAssign {
   authorId       Int
   testTemplate   TestTemplate @relation(fields: [testTemplateId], references: [id])
   testTemplateId Int
+  testSettings   TestSettings @relation(fields: [testSettingsId], references: [id])
+  testSettingsId Int
 }
 
 enum QuestionTypes {

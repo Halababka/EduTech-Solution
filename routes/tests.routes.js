@@ -33,7 +33,12 @@ router.put('/questions/:id', await testValidates.vaildateQuestion, testsControll
 router.post('/questions/:questionId/answers', testValidates.vaildateAnswers, testsController.createAnswer)
 router.get('/questions/:questionId/answers', testsController.getAnswers)
 router.put('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
-router.delete('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
+// router.delete('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
+// router.delete('/subjects/:id', testsController.getTest)
+
+router.post('/template', testsController.createTestTemplate)
+router.post('/settings', testsController.createTestSettings)
+router.post('/assign', testsController.createTestAssign)
 // router.delete('/subjects/:id', testsController.getTest)
 
 

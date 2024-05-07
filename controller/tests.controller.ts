@@ -514,4 +514,15 @@ export class TestsController {
         return res.json(folder)
     }
 
+    async createTestTemplate(req: Request, res: Response) {
+
+    }
+
+    async createTestSettings(req: Request, res: Response) {
+
+    }
+
+    async createTestAssign(req: Request, res: Response) {
+
+    }
 }

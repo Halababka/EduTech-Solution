@@ -1,4 +1,4 @@
-import type {Question, QuestionTypes, Subject, Topic, Folder} from '@prisma/client'
+import type {Question, QuestionTypes, Subject} from '@prisma/client'
 import {Request, Response} from 'express'
 import {client} from '../../db.js'
 import dbErrorsHandler from "../../utils/dbErrorsHandler.js";
@@ -12,7 +12,7 @@ interface QuestionRequestBody {
 
 export class TestValidates {
     async validateSubject(req: Request, res: Response, next: Function) {
-        const {name, topicId} = req.body as Subject;
+        const {name, parentId, children} = req.body;
         if (req.body.hasOwnProperty('name')) {
             if (typeof name !== 'string') {
                 return res.status(400).json({message: 'Название должно быть строкой'});
@@ -22,83 +22,42 @@ export class TestValidates {
             }
         }
 
-        if (req.body.hasOwnProperty('topicId')) {
-            if (typeof topicId !== 'number') {
-                return res.status(400).json({message: 'topicId должно быть числом'});
+        if (req.body.hasOwnProperty('parentId')) {
+            if (typeof parentId !== 'number') {
+                return res.status(400).json({message: 'parentId должно быть числом'});
+            }
+            let result: Subject;
+            try {
+                result = await client.subject.findUnique({
+                    where: {
+                        id: parentId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Тема (parentId) не найдена'})
             }
         }
 
-        next()
-    }
-
-    async validateTopic(req: Request, res: Response, next: Function) {
-        const {name, folderId, subjects} = req.body;
-
-        if (req.body.hasOwnProperty('subjects')) {
-            if (!Array.isArray(subjects) || !subjects.every(el => typeof el === "number")) {
-                return res.status(400).json({error: `Подтемы должны быть массивом и содержать ID тем.`});
+        if (req.body.hasOwnProperty('children')) {
+            if (!Array.isArray(children) || !children.every(el => typeof el === "number")) {
+                return res.status(400).json({error: `children должны быть массивом и содержать ID тем.`});
             }
 
             try {
-                const topicsCheck = await client.subject.findMany({
+                const childrenCheck = await client.subject.findMany({
                     where: {
-                        OR: subjects.map(num => ({id: num}))
+                        OR: children.map(num => ({id: num}))
                     },
                 });
-                if (topicsCheck.length !== subjects.length) {
+                if (childrenCheck.length !== children.length) {
                     return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
                 }
             } catch (e) {
                 return res.status(500).json({error: dbErrorsHandler(e)})
-            }
-        }
-
-        if (req.body.hasOwnProperty('name')) {
-            if (typeof name !== 'string') {
-                return res.status(400).json({message: 'Название должно быть строкой'});
-            }
-            if (name.length < 3) {
-                return res.status(400).json({message: 'Название слишком короткое'});
-            }
-        }
-
-        if (req.body.hasOwnProperty('folderId')) {
-            if (typeof folderId !== 'number') {
-                return res.status(400).json({message: 'folderId должно быть числом'});
-            }
-        }
-
-        next()
-    }
-
-    async validateFolder(req: Request, res: Response, next: Function) {
-        const {name, topics} = req.body;
-
-        if (req.body.hasOwnProperty('topics')) {
-            if (!Array.isArray(topics) || !topics.every(el => typeof el === "number")) {
-                return res.status(400).json({error: `Темы должны быть массивом и содержать ID тем.`});
-            }
-
-            try {
-                const topicsCheck = await client.topic.findMany({
-                    where: {
-                        OR: topics.map(num => ({id: num}))
-                    },
-                });
-                if (topicsCheck.length !== topics.length) {
-                    return res.status(400).json({error: "Одна или несколько указанных тем не существуют"})
-                }
-            } catch (e) {
-                return res.status(500).json({error: dbErrorsHandler(e)})
-            }
-        }
-
-        if (req.body.hasOwnProperty('name')) {
-            if (typeof name !== 'string') {
-                return res.status(400).json({message: 'Название должно быть строкой'});
-            }
-            if (name.length < 3) {
-                return res.status(400).json({message: 'Название слишком короткое'});
             }
         }
 

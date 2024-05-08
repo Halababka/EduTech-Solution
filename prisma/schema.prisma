@@ -126,29 +126,32 @@ model Subject {
   id             Int           @id @default(autoincrement())
   name           String
   questions      Question[]
-  Topic          Topic?        @relation(fields: [topicId], references: [id])
-  topicId        Int?
+  parent         Subject?      @relation("ParentChild", fields: [parentId], references: [id])
+  parentId       Int?
+  // Topic          Topic?        @relation(fields: [topicId], references: [id])
+  // topicId        Int?
   TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
   testTemplateId Int?
+  children       Subject[]     @relation("ParentChild")
 }
 
-model Topic {
-  id             Int           @id @default(autoincrement())
-  name           String
-  subjects       Subject[]
-  Folder         Folder?       @relation(fields: [folderId], references: [id])
-  folderId       Int?
-  TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
-  testTemplateId Int?
-}
-
-model Folder {
-  id             Int           @id @default(autoincrement())
-  name           String
-  topics         Topic[]
-  TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
-  testTemplateId Int?
-}
+// model Topic {
+//   id             Int           @id @default(autoincrement())
+//   name           String
+//   subjects       Subject[]
+//   Folder         Folder?       @relation(fields: [folderId], references: [id])
+//   folderId       Int?
+//   TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+//   testTemplateId Int?
+// }
+//
+// model Folder {
+//   id             Int           @id @default(autoincrement())
+//   name           String
+//   topics         Topic[]
+//   TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+//   testTemplateId Int?
+// }
 
 model Question {
   id       Int           @id @default(autoincrement())
@@ -175,8 +178,8 @@ model TestTemplate {
   authorId   Int
   TestAssign TestAssign[]
   subject    Subject[]
-  topic      Topic[]
-  folder     Folder[]
+  // topic      Topic[]
+  // folder     Folder[]
 }
 
 model TestSettings {

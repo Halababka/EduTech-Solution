@@ -1,4 +1,4 @@
-import type {Question, QuestionTypes, Subject, Topic, Folder} from '@prisma/client'
+import type {Question, QuestionTypes, Subject} from '@prisma/client'
 import {Request, Response} from 'express'
 import {client} from '../../db.js'
 import dbErrorsHandler from "../../utils/dbErrorsHandler.js";
@@ -7,11 +7,12 @@ interface QuestionRequestBody {
     text: string;
     subjects: number[];
     type: QuestionTypes;
+    level: number;
 }
 
 export class TestValidates {
     async validateSubject(req: Request, res: Response, next: Function) {
-        const {name, topicId} = req.body as Subject;
+        const {name, parentId, children} = req.body;
         if (req.body.hasOwnProperty('name')) {
             if (typeof name !== 'string') {
                 return res.status(400).json({message: 'Название должно быть строкой'});
@@ -21,43 +22,42 @@ export class TestValidates {
             }
         }
 
-        if (req.body.hasOwnProperty('topicId')) {
-            if (typeof topicId !== 'number') {
-                return res.status(400).json({message: 'topicId должно быть числом'});
+        if (req.body.hasOwnProperty('parentId')) {
+            if (typeof parentId !== 'number') {
+                return res.status(400).json({message: 'parentId должно быть числом'});
+            }
+            let result: Subject;
+            try {
+                result = await client.subject.findUnique({
+                    where: {
+                        id: parentId,
+                    },
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            if (!result) {
+                return res.status(404).json({error: 'Тема (parentId) не найдена'})
             }
         }
 
-        next()
-    }
-
-    async validateTopic(req: Request, res: Response, next: Function) {
-        const {name, folderId} = req.body as Topic;
-        if (req.body.hasOwnProperty('name')) {
-            if (typeof name !== 'string') {
-                return res.status(400).json({message: 'Название должно быть строкой'});
+        if (req.body.hasOwnProperty('children')) {
+            if (!Array.isArray(children) || !children.every(el => typeof el === "number")) {
+                return res.status(400).json({error: `children должны быть массивом и содержать ID тем.`});
             }
-            if (name.length < 3) {
-                return res.status(400).json({message: 'Название слишком короткое'});
-            }
-        }
 
-        if (req.body.hasOwnProperty('folderId')) {
-            if (typeof folderId !== 'number') {
-                return res.status(400).json({message: 'folderId должно быть числом'});
-            }
-        }
-
-        next()
-    }
-
-    async validateFolder(req: Request, res: Response, next: Function) {
-        const {name} = req.body as Folder;
-        if (req.body.hasOwnProperty('name')) {
-            if (typeof name !== 'string') {
-                return res.status(400).json({message: 'Название должно быть строкой'});
-            }
-            if (name.length < 3) {
-                return res.status(400).json({message: 'Название слишком короткое'});
+            try {
+                const childrenCheck = await client.subject.findMany({
+                    where: {
+                        OR: children.map(num => ({id: num}))
+                    },
+                });
+                if (childrenCheck.length !== children.length) {
+                    return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
+                }
+            } catch (e) {
+                return res.status(500).json({error: dbErrorsHandler(e)})
             }
         }
 
@@ -65,7 +65,7 @@ export class TestValidates {
     }
 
     async vaildateQuestion(req: Request, res: Response, next: Function) {
-        const {text, subjects, type}: QuestionRequestBody = req.body;
+        const {text, subjects, type, level}: QuestionRequestBody = req.body;
         const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER']
         const id: number = parseInt(req.params.id);
 
@@ -80,6 +80,11 @@ export class TestValidates {
 
             if (text.split(" ").join("").length < 3) {
                 return res.status(400).json({message: 'Вопрос слишком короткий'});
+            }
+        }
+        if (level) {
+            if (typeof level !== 'number') {
+                return res.status(400).json({message: 'Сложность вопроса должен быть целым числом'});
             }
         }
 

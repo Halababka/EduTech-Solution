@@ -8,22 +8,25 @@ datasource db {
 }
 
 model User {
-  id               Int         @id @default(autoincrement())
+  id               Int            @id @default(autoincrement())
   first_name       String
   middle_name      String?
   last_name        String
-  username         String      @unique
+  username         String         @unique
   password         String?
-  email            String?     @unique
-  lastLogin        DateTime?   @updatedAt
+  email            String?        @unique
+  lastLogin        DateTime?      @updatedAt
   avatar           String?
   about            String?
-  role             Roles       @relation(fields: [rolesId], references: [id])
+  role             Roles          @relation(fields: [rolesId], references: [id])
   materials        Materials[]
-  rolesId          Int         @default(1)
+  rolesId          Int            @default(1)
   groups           Groups[]
-  enrolled_courses Courses[]   @relation("EnrolledCourses")
-  courses_owned    Courses[]   @relation("CoursesOwners")
+  enrolled_courses Courses[]      @relation("EnrolledCourses")
+  courses_owned    Courses[]      @relation("CoursesOwners")
+  TestAssign       TestAssign[]
+  TestTemplate     TestTemplate[]
+  TestSettings     TestSettings[]
 }
 
 model Roles {
@@ -120,26 +123,35 @@ model Materials {
 // Тестирование:
 
 model Subject {
-  id        Int        @id @default(autoincrement())
-  name      String
-  questions Question[]
-  Topic     Topic?     @relation(fields: [topicId], references: [id])
-  topicId   Int?
+  id             Int           @id @default(autoincrement())
+  name           String
+  questions      Question[]
+  parent         Subject?      @relation("ParentChild", fields: [parentId], references: [id])
+  parentId       Int?
+  // Topic          Topic?        @relation(fields: [topicId], references: [id])
+  // topicId        Int?
+  TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+  testTemplateId Int?
+  children       Subject[]     @relation("ParentChild")
 }
 
-model Topic {
-  id       Int       @id @default(autoincrement())
-  name     String
-  subjects Subject[]
-  Folder   Folder?   @relation(fields: [folderId], references: [id])
-  folderId Int?
-}
-
-model Folder {
-  id     Int     @id @default(autoincrement())
-  name   String
-  topics Topic[]
-}
+// model Topic {
+//   id             Int           @id @default(autoincrement())
+//   name           String
+//   subjects       Subject[]
+//   Folder         Folder?       @relation(fields: [folderId], references: [id])
+//   folderId       Int?
+//   TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+//   testTemplateId Int?
+// }
+//
+// model Folder {
+//   id             Int           @id @default(autoincrement())
+//   name           String
+//   topics         Topic[]
+//   TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+//   testTemplateId Int?
+// }
 
 model Question {
   id       Int           @id @default(autoincrement())
@@ -147,6 +159,7 @@ model Question {
   type     QuestionTypes @default(ONE_ANSWER)
   subjects Subject[]
   answers  Answer[]
+  level    Int?
 }
 
 model Answer {
@@ -156,6 +169,42 @@ model Answer {
   correct    Boolean     @default(false)
   Question   Question    @relation(fields: [questionId], references: [id])
   questionId Int
+}
+
+model TestTemplate {
+  id         Int          @id @default(autoincrement())
+  name       String
+  author     User         @relation(fields: [authorId], references: [id])
+  authorId   Int
+  TestAssign TestAssign[]
+  subject    Subject[]
+  // topic      Topic[]
+  // folder     Folder[]
+}
+
+model TestSettings {
+  id                Int              @id @default(autoincrement())
+  name              String
+  author            User             @relation(fields: [authorId], references: [id])
+  authorId          Int
+  startTime         DateTime?
+  endTime           DateTime?
+  duration          Int?
+  attemptsCount     Int              @default(1)
+  assessmentMethod  AssessmentMethod @default(STATISTICAL)
+  initialDifficulty Int?
+  TestAssign        TestAssign[]
+}
+
+model TestAssign {
+  id             Int          @id @default(autoincrement())
+  name           String
+  author         User         @relation(fields: [authorId], references: [id])
+  authorId       Int
+  testTemplate   TestTemplate @relation(fields: [testTemplateId], references: [id])
+  testTemplateId Int
+  testSettings   TestSettings @relation(fields: [testSettingsId], references: [id])
+  testSettingsId Int
 }
 
 enum QuestionTypes {
@@ -168,4 +217,9 @@ enum AnswerTypes {
   TEXT
   IMAGE
   RICH
+}
+
+enum AssessmentMethod {
+  ADAPTIVE
+  STATISTICAL
 }

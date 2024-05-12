@@ -2,7 +2,7 @@ import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import {Request, Response} from 'express'
 
-import type {Subject, Question, QuestionTypes, Answer, AnswerTypes, Topic, Folder} from '@prisma/client'
+import type {Subject, Question, QuestionTypes, Answer, AnswerTypes} from '@prisma/client'
 
 export class TestsController {
     async createAnswer(req: Request, res: Response) {
@@ -77,7 +77,7 @@ export class TestsController {
     }
 
     async createQuestion(req: Request, res: Response) {
-        const {text, subjects, type} = req.body;
+        const {text, subjects, type, level} = req.body;
         let transformedSubjects: Subject[], finalType: QuestionTypes;
 
         if (!text) {
@@ -105,15 +105,19 @@ export class TestsController {
                 return
             }
         }
-
-        const question: Question = await client.question.create({
-            data: {
-                text: text,
-                subjects: {
-                    connect: transformedSubjects,
-                },
-                type: finalType
+        const data = {
+            text: text,
+            subjects: {
+                connect: transformedSubjects,
             },
+            type: finalType
+        }
+        if (level) data['level'] = level
+        const question: Question = await client.question.create({
+            data: data,
+            include: {
+                subjects: true
+            }
         });
         res.json(question);
     }
@@ -128,7 +132,7 @@ export class TestsController {
     }
 
     async updateQuestion(req: Request, res: Response) {
-        const {text, subjects, type} = req.body;
+        const {text, subjects, type, level} = req.body;
         const id = parseInt(req.params.id);
 
         const newData: any = {}
@@ -139,6 +143,10 @@ export class TestsController {
 
         if (type) {
             newData.type = type
+        }
+
+        if (level) {
+            newData.level = level
         }
 
         if (subjects) {
@@ -168,7 +176,11 @@ export class TestsController {
     }
 
     async createSubject(req: Request, res: Response) {
-        const {name, topicId} = req.body as Subject;
+        const {name, parentId, children} = req.body;
+
+        if (children.includes(parentId)) {
+            return res.status(400).json({error: 'Нельзя назначить одного и того же родителя и ребенка'})
+        }
 
         if (!req.body.hasOwnProperty('name')) {
             return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
@@ -178,30 +190,22 @@ export class TestsController {
             name: name
         }
 
-        if (topicId) {
-            data['topicId'] = topicId
-
-            let result: Topic;
-            try {
-                result = await client.topic.findUnique({
-                    where: {
-                        id: topicId,
-                    },
-                })
-            } catch (e) {
-                res.status(500).json({error: dbErrorsHandler(e)})
-                return
-            }
-            if (!result) {
-                return res.status(404).json({error: 'Topic не найден'})
-            }
+        if (parentId) {
+            data['parentId'] = parentId
         }
 
+        if (children) {
+            data['children'] = {};
+            data['children']['connect'] = children.map((num: number) => ({id: num}))
+        }
 
         let newSubject: Subject;
         try {
             newSubject = await client.subject.create({
                 data: data,
+                include: {
+                    children: true
+                }
             });
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -223,7 +227,7 @@ export class TestsController {
     }
 
     async updateSubjects(req: Request, res: Response) {
-        const {name, topicId} = req.body as Subject;
+        const {name, parentId, children} = req.body;
         const id = parseInt(req.params.id);
 
         let subject: Subject;
@@ -243,19 +247,23 @@ export class TestsController {
             return
         }
 
+        if (children.includes(parentId)) {
+            return res.status(400).json({error: 'Нельзя назначить одного и того же родителя и ребенка'})
+        }
+
         const data = {}
         if (name) {
             data['name'] = name
         }
 
-        if (topicId) {
-            data['topicId'] = topicId
+        if (parentId) {
+            data['parentId'] = parentId
 
-            let result: Topic;
+            let result: Subject;
             try {
-                result = await client.topic.findUnique({
+                result = await client.subject.findUnique({
                     where: {
-                        id: topicId,
+                        id: parentId,
                     },
                 })
             } catch (e) {
@@ -263,8 +271,13 @@ export class TestsController {
                 return
             }
             if (!result) {
-                return res.status(404).json({error: 'Topic не найден'})
+                return res.status(404).json({error: 'Тема с таким id (parentId) не найдена'})
             }
+        }
+
+        if (children) {
+            data['children'] = {};
+            data['children']['connect'] = children.map((num: number) => ({id: num}))
         }
 
         try {
@@ -273,6 +286,9 @@ export class TestsController {
                     id: id,
                 },
                 data: data,
+                include: {
+                    children: true
+                }
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -282,190 +298,15 @@ export class TestsController {
         res.json(subject)
     }
 
-    async createTopic(req: Request, res: Response) {
-        const {name, folderId} = req.body as Topic;
+    async createTestTemplate(req: Request, res: Response) {
 
-        if (!req.body.hasOwnProperty('name')) {
-            return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
-        }
-
-        const data = {
-            name: name
-        }
-
-        if (folderId) {
-            data['folderId'] = folderId
-
-            let result: Folder;
-            try {
-                result = await client.folder.findUnique({
-                    where: {
-                        id: folderId,
-                    },
-                })
-            } catch (e) {
-                res.status(500).json({error: dbErrorsHandler(e)})
-                return
-            }
-            if (!result) {
-                return res.status(404).json({error: 'Folder не найден'})
-            }
-        }
-
-
-        let newSubject: Subject;
-        try {
-            newSubject = await client.subject.create({
-                data: data,
-            });
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-        res.json(newSubject);
     }
 
-    async getTopics(req: Request, res: Response) {
-        let topics: Topic[];
-        try {
-            topics = await client.topic.findMany()
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
+    async createTestSettings(req: Request, res: Response) {
 
-        return res.json(topics);
     }
 
-    async updateTopic(req: Request, res: Response) {
-        const {name, folderId} = req.body as Topic;
-        const id = parseInt(req.params.id);
+    async createTestAssign(req: Request, res: Response) {
 
-        let topic: Topic;
-        try {
-            topic = await client.topic.findUnique({
-                where: {
-                    id: id,
-                },
-            });
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        if (!topic) {
-            res.status(404).json({error: 'Такой темы нет'})
-            return
-        }
-
-        const data = {}
-        if (name) {
-            data['name'] = name
-        }
-
-        if (folderId) {
-            data['folderId'] = folderId
-
-            let result: Folder;
-            try {
-                result = await client.folder.findUnique({
-                    where: {
-                        id: folderId,
-                    },
-                })
-            } catch (e) {
-                res.status(500).json({error: dbErrorsHandler(e)})
-                return
-            }
-            if (!result) {
-                return res.status(404).json({error: 'Folder не найден'})
-            }
-        }
-
-        try {
-            topic = await client.topic.update({
-                where: {
-                    id: id,
-                },
-                data: data,
-            })
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        res.json(topic)
     }
-
-    async createFolder(req: Request, res: Response) {
-        const {name} = req.body as Folder;
-
-        if (!req.body.hasOwnProperty('name')) {
-            return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
-        }
-
-        let newFolder: Folder;
-        try {
-            newFolder = await client.subject.create({
-                data: {
-                    name: name
-                },
-            });
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-        res.json(newFolder);
-    }
-
-    async getFolders(req: Request, res: Response) {
-        let folders: Folder[];
-        try {
-            folders = await client.folder.findMany()
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        return res.json(folders);
-    }
-
-    async updateFolder(req: Request, res: Response) {
-        const {name} = req.body as Folder;
-        const id = parseInt(req.params.id);
-
-        let folder: Folder;
-        try {
-            folder = await client.folder.findUnique({
-                where: {
-                    id: id,
-                },
-            });
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        if (!folder) {
-            res.status(404).json({error: 'Такой папки нет'})
-            return
-        }
-
-        try {
-            folder = await client.folder.update({
-                where: {
-                    id: id,
-                },
-                data: {
-                    name: name
-                },
-            })
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        return res.json(folder)
-    }
-
 }

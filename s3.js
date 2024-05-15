@@ -1,4 +1,6 @@
 import AWS from 'aws-sdk';
+import 'dotenv/config'
+
 process.env.AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE = '1';
 
 import { client } from "./db.js";
@@ -7,8 +9,8 @@ import multerS3 from 'multer-s3';
 
 export const s3 = new AWS.S3({
     endpoint: "s3.cloud.ru",
-    accessKeyId: "e1f21548-0137-4084-9bbb-e6ade093414f:54f685e00bbc37389f0458ac0b9a16c1",
-    secretAccessKey: "66d22e28263208bc4ea107c69f7294c8",
+    accessKeyId: process.env.S3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_SECRET_KEY,
 });
 
 export const uploadFileToS3 = async (bucketName, filePath, fileContent) => {

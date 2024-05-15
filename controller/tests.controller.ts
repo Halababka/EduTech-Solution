@@ -4,6 +4,21 @@ import {Request, Response} from 'express'
 
 import type {Subject, Question, QuestionTypes, Answer, AnswerTypes} from '@prisma/client'
 
+async function checkCircularReference(id: number, parentId: number, res: Response) {
+    // Fetch the parent
+    const parent = await client.subject.findUnique({where: {id: parentId}});
+
+    // If the parent's parentId is the same as the current id, throw an error
+    if (parent.parentId === id) {
+        return res.status(400).json({error: 'Родитель не может быть своим потомком'});
+    }
+
+    // If the parent has a parent, recursively check the next level
+    if (parent.parentId) {
+        await checkCircularReference(id, parent.parentId, res);
+    }
+}
+
 export class TestsController {
     async createAnswer(req: Request, res: Response) {
         const questionId = parseInt(req.params.questionId);
@@ -178,13 +193,15 @@ export class TestsController {
     async createSubject(req: Request, res: Response) {
         const {name, parentId, children} = req.body;
 
-        if (children.includes(parentId)) {
+        if (children && parentId && children.includes(parentId)) {
             return res.status(400).json({error: 'Нельзя назначить одного и того же родителя и ребенка'})
         }
 
         if (!req.body.hasOwnProperty('name')) {
             return res.status(400).json({error: 'Одно или несколько обязательных полей отсуствуют'})
         }
+
+        // await checkCircularReference(id, parentId, res);
 
         const data = {
             name: name
@@ -247,9 +264,11 @@ export class TestsController {
             return
         }
 
-        if (children.includes(parentId)) {
+        if (children && parentId && children.includes(parentId)) {
             return res.status(400).json({error: 'Нельзя назначить одного и того же родителя и ребенка'})
         }
+
+        await checkCircularReference(id, parentId, res);
 
         const data = {}
         if (name) {

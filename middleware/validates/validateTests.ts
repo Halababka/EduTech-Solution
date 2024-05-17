@@ -162,23 +162,26 @@ export class TestValidates {
 
     async validateTemplate(req: Request, res: Response, next: Function) {
         const {name, subjects} = req.body;
+        const id = parseInt(req.params.id)
 
-        if (typeof parseInt(req.params.id) === 'number') {
 
-            try {
-                const templateCheck = await client.testTemplate.findUnique({
-                    where: {
-                        id: parseInt(req.params.id),
+        if (id) {
+            if (typeof id === 'number' && id > 0) {
+                try {
+                    const templateCheck = await client.testTemplate.findUnique({
+                        where: {
+                            id: parseInt(req.params.id),
+                        }
+                    });
+                    if (!templateCheck) {
+                        return res.status(404).json({error: "id не найден"})
                     }
-                });
-                if (!templateCheck) {
-                    return res.status(404).json({error: "id не найден"})
+                } catch (e) {
+                    return res.status(500).json({error: dbErrorsHandler(e)})
                 }
-            } catch (e) {
-                return res.status(500).json({error: dbErrorsHandler(e)})
+            } else {
+                return res.status(400).json({error: 'id должно быть целым числом'});
             }
-        } else {
-            return res.status(400).json({error: 'id должно быть целым числом'});
         }
 
         if (req.body.hasOwnProperty('name')) {
@@ -214,24 +217,28 @@ export class TestValidates {
 
     async validateSettings(req: Request, res: Response, next: Function) {
         const {name, startTime, endTime, duration, attemptsCount, assessmentMethod, initialDifficulty} = req.body;
+        const id = parseInt(req.params.id)
 
-        if (typeof parseInt(req.params.id) === 'number') {
+        if (id) {
+            if (typeof id === 'number' && id > 0) {
 
-            try {
-                const templateCheck = await client.testSettings.findUnique({
-                    where: {
-                        id: parseInt(req.params.id),
+                try {
+                    const templateCheck = await client.testSettings.findUnique({
+                        where: {
+                            id: parseInt(req.params.id),
+                        }
+                    });
+                    if (!templateCheck) {
+                        return res.status(404).json({error: "id не найден"})
                     }
-                });
-                if (!templateCheck) {
-                    return res.status(404).json({error: "id не найден"})
+                } catch (e) {
+                    return res.status(500).json({error: dbErrorsHandler(e)})
                 }
-            } catch (e) {
-                return res.status(500).json({error: dbErrorsHandler(e)})
+            } else {
+                return res.status(400).json({error: 'id должно быть целым числом'});
             }
-        } else {
-            return res.status(400).json({error: 'id должно быть целым числом'});
         }
+
 
         if (req.body.hasOwnProperty('name')) {
             if (typeof name !== 'string') {
@@ -269,6 +276,88 @@ export class TestValidates {
         if (initialDifficulty) {
             if (typeof initialDifficulty !== 'number') {
                 return res.status(400).json({error: 'initialDifficulty должен быть числом'});
+            }
+        }
+        next()
+    }
+
+    async validateAssign(req: Request, res: Response, next: Function) {
+        const {name, testTemplateId, testSettingsId, users, groups} = req.body;
+        const id = parseInt(req.params.id);
+
+        if (id) {
+            if (typeof id === 'number' && id > 0) {
+
+                try {
+                    const templateCheck = await client.testAssign.findUnique({
+                        where: {
+                            id: parseInt(req.params.id),
+                        }
+                    });
+                    if (!templateCheck) {
+                        return res.status(404).json({error: "id не найден"})
+                    }
+                } catch (e) {
+                    return res.status(500).json({error: dbErrorsHandler(e)})
+                }
+            } else {
+                return res.status(400).json({error: 'id должно быть целым числом'});
+            }
+        }
+
+
+        if (req.body.hasOwnProperty('name')) {
+            if (typeof name !== 'string') {
+                return res.status(400).json({error: 'Название должно быть строкой'});
+            }
+            if (name.length < 3) {
+                return res.status(400).json({error: 'Название слишком короткое'});
+            }
+        }
+        if (testTemplateId) {
+            if (typeof testTemplateId !== 'number') {
+                return res.status(400).json("testTemplateId должно быть числом")
+            }
+        }
+        if (testSettingsId) {
+            if (typeof testSettingsId !== 'number') {
+                return res.status(400).json("testSettingsId должно быть числом")
+            }
+        }
+        if (req.body.hasOwnProperty('users')) {
+            if (!Array.isArray(users) || !users.every(el => typeof el === "number")) {
+                return res.status(400).json({error: `users должны быть массивом и содержать ID тем.`});
+            }
+
+            try {
+                const usersCheck = await client.user.findMany({
+                    where: {
+                        OR: users.map(num => ({id: num}))
+                    },
+                });
+                if (usersCheck.length !== users.length) {
+                    return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
+                }
+            } catch (e) {
+                return res.status(500).json({error: dbErrorsHandler(e)})
+            }
+        }
+        if (req.body.hasOwnProperty('groups')) {
+            if (!Array.isArray(groups) || !groups.every(el => typeof el === "number")) {
+                return res.status(400).json({error: `groups должны быть массивом и содержать ID тем.`});
+            }
+
+            try {
+                const groupsCheck = await client.groups.findMany({
+                    where: {
+                        OR: groups.map(num => ({id: num}))
+                    },
+                });
+                if (groupsCheck.length !== groups.length) {
+                    return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
+                }
+            } catch (e) {
+                return res.status(500).json({error: dbErrorsHandler(e)})
             }
         }
         next()

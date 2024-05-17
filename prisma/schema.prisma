@@ -24,9 +24,10 @@ model User {
   groups           Groups[]
   enrolled_courses Courses[]      @relation("EnrolledCourses")
   courses_owned    Courses[]      @relation("CoursesOwners")
-  TestAssign       TestAssign[]
   TestTemplate     TestTemplate[]
   TestSettings     TestSettings[]
+  assignUsers      UserAssign[]
+  TestAssign       TestAssign[]
 }
 
 model Roles {
@@ -45,15 +46,17 @@ model Permissions {
 }
 
 model Groups {
-  id           Int      @id @default(autoincrement())
-  full_name    String   @unique // Полное название группы
-  abbreviation String?  @map("abbr") // Сокращенное название группы
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  parent       Groups?  @relation("parentId", fields: [parentId], references: [id])
-  subgroups    Groups[] @relation("parentId")
+  id           Int         @id @default(autoincrement())
+  full_name    String      @unique // Полное название группы
+  abbreviation String?     @map("abbr") // Сокращенное название группы
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  parent       Groups?     @relation("parentId", fields: [parentId], references: [id])
+  subgroups    Groups[]    @relation("parentId")
   parentId     Int?
   users        User[]
+  TestAssign   TestAssign? @relation(fields: [testAssignId], references: [id])
+  testAssignId Int?
 }
 
 model Categories {
@@ -121,7 +124,6 @@ model Materials {
 }
 
 // Тестирование:
-
 model Subject {
   id             Int           @id @default(autoincrement())
   name           String
@@ -177,12 +179,23 @@ model TestSettings {
 model TestAssign {
   id             Int          @id @default(autoincrement())
   name           String
-  author         User         @relation(fields: [authorId], references: [id])
   authorId       Int
+  author         User         @relation(fields: [authorId], references: [id])
   testTemplate   TestTemplate @relation(fields: [testTemplateId], references: [id])
   testTemplateId Int
   testSettings   TestSettings @relation(fields: [testSettingsId], references: [id])
   testSettingsId Int
+  groups         Groups[]
+  users          UserAssign[]
+}
+
+model UserAssign {
+  user     User       @relation(fields: [userId], references: [id])
+  userId   Int
+  assign   TestAssign @relation(fields: [assignId], references: [id])
+  assignId Int
+
+  @@id([userId, assignId])
 }
 
 enum QuestionTypes {

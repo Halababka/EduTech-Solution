@@ -2,7 +2,15 @@ import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import {Request, Response} from 'express'
 
-import type {Subject, Question, QuestionTypes, Answer, AnswerTypes, TestTemplate, TestSettings} from '@prisma/client'
+import type {
+    Subject,
+    Question,
+    QuestionTypes,
+    Answer,
+    AnswerTypes,
+    TestTemplate,
+    TestSettings, TestAssign
+} from '@prisma/client'
 
 async function checkCircularReference(id: number, parentId: number, res: Response) {
     // Fetch the parent
@@ -17,6 +25,14 @@ async function checkCircularReference(id: number, parentId: number, res: Respons
     if (parent.parentId) {
         await checkCircularReference(id, parent.parentId, res);
     }
+}
+
+function now() {
+    return new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 export class TestsController {
@@ -325,13 +341,7 @@ export class TestsController {
             authorId: user_id
         };
 
-        let date = new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        newData.name = name ? name : `Шаблон от ${date}`
+        newData.name = name ? name : `Шаблон от ${now()}`
 
         if (subjects) {
             try {
@@ -421,21 +431,6 @@ export class TestsController {
         return res.json(template)
     }
 
-
-//     model TestSettings {
-//     id                Int              @id @default(autoincrement())
-//     name              String
-//     author            User             @relation(fields: [authorId], references: [id])
-//     authorId          Int
-//     startTime         DateTime?
-//     endTime           DateTime?
-//     duration          Int?
-//     attemptsCount     Int              @default(1)
-//     assessmentMethod  AssessmentMethod @default(STATISTICAL)
-//     initialDifficulty Int?
-//     TestAssign        TestAssign[]
-// }
-
     async createTestSettings(req: Request, res: Response) {
         const {name, startTime, endTime, duration, attemptsCount, assessmentMethod, initialDifficulty} = req.body;
         const user_id = (req as any).user.id;
@@ -460,13 +455,7 @@ export class TestsController {
             newData.assessmentMethod = assessmentMethod
         }
 
-        let date = new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        newData.name = name ? name : `Настройки от ${date}`
+        newData.name = name ? name : `Настройки от ${now()}`
 
         if (startTime) {
             newData.startTime = new Date(startTime)
@@ -543,6 +532,164 @@ export class TestsController {
     }
 
     async createTestAssign(req: Request, res: Response) {
+        const {name, testTemplateId, testSettingsId, users, groups} = req.body;
+        const user_id = (req as any).user.id;
 
+        if (!testSettingsId && !testTemplateId) {
+            return res.status(400).json({error: "testTemplateId и testSettingsId являются обязательными"})
+        }
+
+        let newData: any = {
+            author: {
+                connect: {id: user_id},
+            },
+            testTemplate: {
+                connect: {id: testTemplateId}
+            },
+            testSettings: {
+                connect: {id: testSettingsId}
+            }
+        };
+
+        newData.name = name ? name : `Назначение от ${now()}`
+
+        if (users) {
+            try {
+                newData.users = {
+                    create: users.map((user) => ({
+                        user: {
+                            connect: {id: user}
+                        }
+                    }))
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
+            }
+        }
+
+        if (groups) {
+            try {
+                newData.groups = {
+                    connect: [...groups.map((num: number) => ({id: num}))]
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
+            }
+        }
+
+        let testAssign: TestAssign;
+        try {
+            testAssign = await client.testAssign.create({
+                data: newData,
+                include: {
+                    users: true,
+                    groups: true
+                }
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(testAssign)
+    }
+
+    async getTestAssign(req: Request, res: Response) {
+        let assign: TestAssign[]
+        try {
+            assign = await client.testAssign.findMany({
+                include:{
+                    users: true,
+                    groups: true
+                }
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(assign)
+    }
+
+    async updateTestAssign(req: Request, res: Response) {
+        const {name, testTemplateId, testSettingsId, users, groups} = req.body;
+        const id = parseInt(req.params.id);
+
+        let newData: any = {};
+
+        if (name) newData.name = name
+
+        if (testTemplateId) newData.testTemplateId = testTemplateId
+
+        if (testSettingsId) newData.testSettingsId = testSettingsId
+
+        if (users) {
+            try {
+                newData.users = {
+                    create: users.map((user) => ({
+                        user: {
+                            connect: {id: user}
+                        }
+                    }))
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
+            }
+        }
+
+        if (groups) {
+            try {
+                newData.groups = {
+                    connect: [...groups.map((num: number) => ({id: num}))]
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
+            }
+        }
+
+        if (Object.keys(newData).length === 0) {
+            return res.status(400).json({error: 'Нет данных для обновления'})
+        }
+
+        let newGroup;
+        let newUsers;
+        if (groups) newGroup = []
+        if (users) newUsers = []
+
+        let testAssign: TestAssign;
+        try {
+
+            return await client.$transaction([
+                client.testAssign.update({
+                    where:{
+                        id: id
+                    },
+                    data: {
+                    }
+                }),
+                client.testAssign.update({
+                    where:{
+                        id: id
+                    },
+                    data: newData
+                })
+            ]);
+
+            // testAssign = await client.testAssign.update({
+            //     where:{
+            //       id: id
+            //     },
+            //     data: newData,
+            //     include: {
+            //         users: true,
+            //         groups: true
+            //     }
+            // });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(testAssign)
     }
 }

@@ -31,11 +31,12 @@ model User {
 }
 
 model Roles {
-  id          Int           @id @default(autoincrement())
-  code        String        @unique
-  name        String        @unique
-  User        User[]
-  permissions Permissions[]
+  id                Int                 @id @default(autoincrement())
+  code              String              @unique
+  name              String              @unique
+  User              User[]
+  permissions       Permissions[]
+  RegistrationLinks RegistrationLinks[]
 }
 
 model Permissions {
@@ -46,17 +47,18 @@ model Permissions {
 }
 
 model Groups {
-  id           Int         @id @default(autoincrement())
-  full_name    String      @unique // Полное название группы
-  abbreviation String?     @map("abbr") // Сокращенное название группы
-  created_at   DateTime    @default(now())
-  updated_at   DateTime    @updatedAt
-  parent       Groups?     @relation("parentId", fields: [parentId], references: [id])
-  subgroups    Groups[]    @relation("parentId")
-  parentId     Int?
-  users        User[]
-  TestAssign   TestAssign? @relation(fields: [testAssignId], references: [id])
-  testAssignId Int?
+  id                 Int                 @id @default(autoincrement())
+  full_name          String              @unique // Полное название группы
+  abbreviation       String?             @map("abbr") // Сокращенное название группы
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  parent             Groups?             @relation("parentId", fields: [parentId], references: [id])
+  subgroups          Groups[]            @relation("parentId")
+  parentId           Int?
+  users              User[]
+  TestAssign         TestAssign?         @relation(fields: [testAssignId], references: [id])
+  testAssignId       Int?
+  registration_links RegistrationLinks[]
 }
 
 model Categories {
@@ -121,6 +123,19 @@ model Materials {
   courses          Courses[]
   userId           Int
   section_contents SectionContents[]
+}
+
+model RegistrationLinks {
+  id               Int      @id @default(autoincrement())
+  name             String
+  description      String?
+  token            String   @unique
+  remaining_usages Int
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  role             Roles?   @relation(fields: [rolesId], references: [id])
+  groups           Groups[]
+  rolesId          Int?
 }
 
 // Тестирование:

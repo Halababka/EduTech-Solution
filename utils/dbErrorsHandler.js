@@ -1,4 +1,4 @@
-import { Prisma } from "../db.js";
+import {Prisma} from "../db.js";
 
 const dbErrorsHandler = (e) => {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
@@ -9,6 +9,8 @@ const dbErrorsHandler = (e) => {
                 return "Нет подключения с БД";
             case "P2025":
                 return "Одна или несколько записей, которые были необходимы не найдены";
+            case "P2003":
+                return "Один из указанных id не найден";
             default:
                 return "Необрабатываемая ошибка";
         }

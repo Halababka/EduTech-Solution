@@ -8,4 +8,10 @@ const router = express.Router();
 
 router.use(authenticateToken)
 router.get('/', rolesController.getAllRoles)
+router.post('/', RolesController.createRole);
+router.delete('', RolesController.deleteRoles);
+router.put('/:roleId', RolesController.updateRole);
+router.delete('/:roleId/permissions', RolesController.deleteRolePermission);
+router.post('/:roleId/permissions', RolesController.addPermissionsToRole);
+
 export default router;

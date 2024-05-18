@@ -11,6 +11,7 @@ import groupsRouter from "./routes/groups.routes.js";
 import categoriesRoutes from "./routes/categories.routes.js";
 import rolesRoutes from "./routes/roles.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
+import permissionsRoutes from "./routes/permissions.routes.js";
 
 const PORT = process.env.PORT || 8080;
 
@@ -27,4 +28,5 @@ app.use('/api/groups', groupsRouter);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/registration', registrationRoutes)
+app.use('/api/permissions', permissionsRoutes)
 app.listen(PORT, () => console.log(`Server has been started on port ${PORT}`));

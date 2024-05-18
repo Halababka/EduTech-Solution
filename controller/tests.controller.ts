@@ -623,19 +623,19 @@ export class TestsController {
 
         if (testSettingsId) newData.testSettingsId = testSettingsId
 
-        // if (users) {
-        //     try {
-        //         newData.users = {
-        //             create: users.map((user) => ({
-        //                 user: {
-        //                     connect: {id: user}
-        //                 }
-        //             }))
-        //         }
-        //     } catch (e) {
-        //         return res.status(400).json({error: 'Невозможно распарсить массив'});
-        //     }
-        // }
+        if (users) {
+            try {
+                newData.users = {
+                    create: users.map((user) => ({
+                        user: {
+                            connect: {id: user}
+                        }
+                    }))
+                }
+            } catch (e) {
+                return res.status(400).json({error: 'Невозможно распарсить массив'});
+            }
+        }
 
         if (groups) {
             try {
@@ -658,16 +658,7 @@ export class TestsController {
         if (groups) {
             deleteData.groups = {set: []}
         }
-        console.log(JSON.stringify({
-            where: {
-                id: id
-            },
-            data: newData,
-            include: {
-                groups: true,
-                users: true
-            }
-        }))
+
         let testAssign: any;
         try {
             testAssign = await client.$transaction([
@@ -692,18 +683,6 @@ export class TestsController {
                     }
                 })
             ]);
-
-
-            // testAssign = await client.testAssign.update({
-            //     where:{
-            //       id: id
-            //     },
-            //     data: newData,
-            //     include: {
-            //         users: true,
-            //         groups: true
-            //     }
-            // });
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return

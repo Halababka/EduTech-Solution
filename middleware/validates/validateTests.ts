@@ -353,7 +353,6 @@ export class TestValidates {
                         OR: groups.map(num => ({id: num}))
                     },
                 });
-                console.log(groupsCheck)
                 if (groupsCheck.length !== groups.length) {
                     return res.status(400).json({
                         error: "Одна или несколько указанных групп не существуют"

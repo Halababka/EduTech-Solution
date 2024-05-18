@@ -1,6 +1,7 @@
 import { DB } from "../db/db.js";
 import { client } from "../db.js";
 import bcrypt from "bcrypt";
+import io from "socket.io-client";
 
 const db = new DB();
 const saltRounds = 10;
@@ -9,8 +10,19 @@ export class UserController {
     async getAllUsers(req, res) {
         try {
             const users = await client.user.findMany({
-                include: {
-                    role: true, groups: true
+                select: {
+                    id: true,
+                    first_name: true,
+                    middle_name: true,
+                    last_name: true,
+                    username: true,
+                    about: true,
+                    email: true,
+                    lastLogin: true,
+                    avatar: true,
+                    rolesId: true,
+                    role: true,
+                    groups: true
                 }
             });
             res.json(users);
@@ -180,23 +192,20 @@ export class UserController {
                 delete updatedFields.password;
             }
             console.log(userData.groups)
+
+            // Формируем данные для обновления пользователя
+            const userDataToUpdate = {
+                ...updatedFields,
+                // Используем connect для связи с существующей ролью по идентификатору
+                ...(userData.role && { role: { connect: { id: userData.role.id } }}),
+                // Используем set для обновления групп пользователя
+                ...(userData.groups && { groups: { set: userData.groups }}),
+            };
+
             // Обновляем информацию о пользователе в базе данных
             const updatedUser = await client.user.update({
                 where: { id: userId },
-                data: {
-                    ...updatedFields,
-                    // Используем connect для связи с существующей ролью по идентификатору
-                    role: {
-                        connect: { id: userData.role.id }
-                    },
-                    // Используем disconnect для отключения всех пользователей от групп
-                    groups: {
-                        // Удаляем текущие группы и связи с пользователем
-                        set: [],
-                        // Передаем массив объектов в виде структуры GroupsUpdateManyWithoutUsersNestedInput
-                        connect: userData.groups.map(group => ({ id: group.id }))
-                    }
-                }
+                data: userDataToUpdate
             });
 
             // Возвращаем успешный ответ с обновленными данными пользователя

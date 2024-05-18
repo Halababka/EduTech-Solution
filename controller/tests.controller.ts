@@ -1,6 +1,6 @@
 import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
-import {Request, Response} from 'express'
+import {json, Request, Response} from 'express'
 
 import type {
     Subject,
@@ -598,7 +598,7 @@ export class TestsController {
         let assign: TestAssign[]
         try {
             assign = await client.testAssign.findMany({
-                include:{
+                include: {
                     users: true,
                     groups: true
                 }
@@ -623,19 +623,19 @@ export class TestsController {
 
         if (testSettingsId) newData.testSettingsId = testSettingsId
 
-        if (users) {
-            try {
-                newData.users = {
-                    create: users.map((user) => ({
-                        user: {
-                            connect: {id: user}
-                        }
-                    }))
-                }
-            } catch (e) {
-                return res.status(400).json({error: 'Невозможно распарсить массив'});
-            }
-        }
+        // if (users) {
+        //     try {
+        //         newData.users = {
+        //             create: users.map((user) => ({
+        //                 user: {
+        //                     connect: {id: user}
+        //                 }
+        //             }))
+        //         }
+        //     } catch (e) {
+        //         return res.status(400).json({error: 'Невозможно распарсить массив'});
+        //     }
+        // }
 
         if (groups) {
             try {
@@ -651,29 +651,48 @@ export class TestsController {
             return res.status(400).json({error: 'Нет данных для обновления'})
         }
 
-        let newGroup;
-        let newUsers;
-        if (groups) newGroup = []
-        if (users) newUsers = []
-
-        let testAssign: TestAssign;
+        let deleteData: any = {};
+        if (users) {
+            deleteData.users = {deleteMany: {}}
+        }
+        if (groups) {
+            deleteData.groups = {set: []}
+        }
+        console.log(JSON.stringify({
+            where: {
+                id: id
+            },
+            data: newData,
+            include: {
+                groups: true,
+                users: true
+            }
+        }))
+        let testAssign: any;
         try {
-
-            return await client.$transaction([
+            testAssign = await client.$transaction([
                 client.testAssign.update({
-                    where:{
+                    where: {
                         id: id
                     },
-                    data: {
+                    data: deleteData,
+                    include: {
+                        groups: true,
+                        users: true
                     }
                 }),
                 client.testAssign.update({
-                    where:{
+                    where: {
                         id: id
                     },
-                    data: newData
+                    data: newData,
+                    include: {
+                        groups: true,
+                        users: true
+                    }
                 })
             ]);
+
 
             // testAssign = await client.testAssign.update({
             //     where:{
@@ -690,6 +709,6 @@ export class TestsController {
             return
         }
 
-        return res.json(testAssign)
+        return res.json(testAssign[1])
     }
 }

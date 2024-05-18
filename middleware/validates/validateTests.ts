@@ -336,7 +336,7 @@ export class TestValidates {
                     },
                 });
                 if (usersCheck.length !== users.length) {
-                    return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
+                    return res.status(400).json({error: "Один или несколько указанных пользователей не существуют"})
                 }
             } catch (e) {
                 return res.status(500).json({error: dbErrorsHandler(e)})
@@ -353,8 +353,11 @@ export class TestValidates {
                         OR: groups.map(num => ({id: num}))
                     },
                 });
+                console.log(groupsCheck)
                 if (groupsCheck.length !== groups.length) {
-                    return res.status(400).json({error: "Одна или несколько указанных подтем не существуют"})
+                    return res.status(400).json({
+                        error: "Одна или несколько указанных групп не существуют"
+                    });
                 }
             } catch (e) {
                 return res.status(500).json({error: dbErrorsHandler(e)})

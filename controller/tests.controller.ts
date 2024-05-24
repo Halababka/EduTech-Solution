@@ -108,8 +108,8 @@ export class TestsController {
     }
 
     async createQuestion(req: Request, res: Response) {
-        const {text, subjects, type, level} = req.body;
-        let transformedSubjects: Subject[], finalType: QuestionTypes;
+        const {text, subjectId, type, level, answers} = req.body;
+        let finalType: QuestionTypes;
 
         if (!text) {
             return res.status(400).json({error: 'Необходимо указать текст вопроса'});
@@ -117,53 +117,37 @@ export class TestsController {
 
         finalType = type ? type : 'ONE_ANSWER'
 
-        if (!subjects) {
-            transformedSubjects = []
-        } else {
-            try {
-                const subjectCheck = await client.subject.findMany({
-                    where: {
-                        OR: subjects.map((num: number) => ({id: num}))
-                    },
-                });
-                if (subjectCheck.length !== subjects.length) {
-                    return res.status(400).json({error: "Темы, с указанными ID не существуют"})
-                } else {
-                    transformedSubjects = subjects.map((num: number) => ({id: num}))
-                }
-            } catch (e) {
-                res.status(500).json({error: dbErrorsHandler(e)})
-                return
-            }
-        }
         const data = {
             text: text,
-            subjects: {
-                connect: transformedSubjects,
-            },
-            type: finalType
+            subjectId: subjectId,
+            type: finalType,
+            answers: {create: answers}
         }
+
         if (level) data['level'] = level
         const question: Question = await client.question.create({
             data: data,
             include: {
-                subjects: true
+                subjects: true,
+                answers: true
             }
         });
-        res.json(question);
+
+        return res.json(question);
     }
 
     async getQuestion(req: Request, res: Response) {
         const questions: Question[] = await client.question.findMany({
             include: {
                 subjects: true,
-            },
+                answers: true
+            }
         })
         res.json(questions);
     }
 
     async updateQuestion(req: Request, res: Response) {
-        const {text, subjects, type, level} = req.body;
+        const {text, subjectId, type, level, answers} = req.body;
         const id = parseInt(req.params.id);
 
         const newData: any = {}
@@ -180,13 +164,13 @@ export class TestsController {
             newData.level = level
         }
 
-        if (subjects) {
-            try {
-                newData.subjects = {
-                    set: [...subjects.map((num: number) => ({id: num}))]
-                }
-            } catch (e) {
-                return res.status(400).json({error: 'Невозможно распарсить массив'});
+        if (level) {
+            newData.subjectId = subjectId
+        }
+
+        if (answers) {
+            newData.answers = {
+                set: answers
             }
         }
 
@@ -195,9 +179,6 @@ export class TestsController {
         }
 
         const updatedQuestion = await client.question.update({
-            include: {
-                subjects: true
-            },
             where: {id: id},
             data: newData,
         });

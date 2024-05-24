@@ -151,18 +151,19 @@ model Subject {
 }
 
 model Question {
-  id       Int           @id @default(autoincrement())
-  text     String
-  type     QuestionTypes @default(ONE_ANSWER)
-  subjects Subject[]
-  answers  Answer[]
-  level    Int?
+  id        Int           @id @default(autoincrement())
+  text      String
+  type      QuestionTypes @default(ONE_ANSWER)
+  subjects  Subject?      @relation(fields: [subjectId], references: [id])
+  answers   Answer[]
+  level     Int?
+  subjectId Int?
 }
 
 model Answer {
   id         Int         @id @default(autoincrement())
   content    String
-  type       AnswerTypes
+  type       AnswerTypes @default(TEXT)
   correct    Boolean     @default(false)
   Question   Question    @relation(fields: [questionId], references: [id])
   questionId Int

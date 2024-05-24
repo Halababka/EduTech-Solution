@@ -65,8 +65,8 @@ export class TestValidates {
     }
 
     async vaildateQuestion(req: Request, res: Response, next: Function) {
-        const {text, subjects, type, level}: QuestionRequestBody = req.body;
-        const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER']
+        const {text, subjectId, type, level} = req.body;
+        const allowedTypes = ['ONE_ANSWER', 'MANY_ANSWERS', 'TEXT_ANSWER'];
         const id: number = parseInt(req.params.id);
 
         if (text) {
@@ -93,19 +93,24 @@ export class TestValidates {
                 return res.status(400).json({error: `Тип ${type} не разрешен.`});
             }
         }
-        if (subjects) {
-            if (!Array.isArray(subjects) || !subjects.every(el => typeof el === "number")) {
-                return res.status(400).json({error: `Темы должны быть массивом и содержать ID тем.`});
+        if (req.body.hasOwnProperty('subjectId')) {
+            if (typeof subjectId !== 'number') {
+                return res.status(400).json({error: 'subjectId должно быть числом'});
             }
-
             try {
-                const subjectCheck = await client.subject.findMany({
+                const result = await client.subject.findUnique({
                     where: {
-                        OR: subjects.map(num => ({id: num}))
+                        id: subjectId
                     },
-                });
-                if (subjectCheck.length !== subjects.length) {
-                    res.status(400).json({error: "Одна или несколько указанных тем не существуют"})
+                    include: {
+                        children: true
+                    }
+                })
+                if (!result) {
+                    return res.status(404).json({error: 'Тема (subjectId) не найдена'})
+                }
+                if (result.children.length > 0) {
+                    return res.status(400).json({error: 'Нельзя создать вопрос в этой теме'})
                 }
             } catch (e) {
                 res.status(500).json({error: dbErrorsHandler(e)})
@@ -136,25 +141,45 @@ export class TestValidates {
         next()
     }
 
-    vaildateAnswers(req: Request, res: Response, next: Function) {
-        const {type, content, correct} = req.body;
+    validateAnswers(req: Request, res: Response, next: Function) {
+        const {answers, type} = req.body;
+
         const allowedTypes = ['TEXT', 'IMAGE']
 
-        if (correct) {
-            if (typeof correct !== 'boolean') {
-                return res.status(400).json({error: 'Correct должен быть boolean'});
-            }
-        }
-        if (content) {
-            if (typeof content !== 'string') {
-                return res.status(400).json({error: 'Content должен быть строкой'});
-            }
-        }
+        let one_answer = false
 
-        if (type) {
-            if (!allowedTypes.includes(type)) {
-                return res.status(400).json({error: `Тип ${type} не разрешен.`});
-            }
+        try {
+            answers.forEach((item, id) => {
+                if (item.correct) {
+                    if (typeof item.correct !== 'boolean') {
+                        throw new Error('correct должно быть boolean')
+                    }
+                }
+
+                if (item.content) {
+                    if (typeof item.content !== 'string') {
+                        throw new Error('Content должен быть строкой')
+                    }
+                }
+
+                if (item.type) {
+                    if (!allowedTypes.includes(item.type)) {
+                        throw new Error(`Тип ${item.type} не разрешен.`)
+                    }
+                }
+
+                if (type === 'ONE_ANSWER') {
+                    if ((item.correct && one_answer) || (!one_answer && (id === answers.length - 1) && !item.correct)) {
+                        console.log(one_answer)
+                        throw new Error('Допустим только один правильный ответ.')
+                    }
+                    if (item.correct) {
+                        one_answer = true
+                    }
+                }
+            })
+        } catch (e) {
+            return res.status(400).json({error: e.message})
         }
 
         next()

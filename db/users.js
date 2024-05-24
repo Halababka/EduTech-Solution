@@ -13,6 +13,9 @@ export class Users {
                     username: true,
                     about: true,
                     groups: true,
+                    lastLogin: true,
+                    email: true,
+                    password: true,
                     role: {
                         include: {
                             permissions: true

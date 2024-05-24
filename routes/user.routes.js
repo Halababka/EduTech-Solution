@@ -17,7 +17,8 @@ router.get("/:userId/permissions");
 router.get("/:userId/favorites");
 router.get("/:userId/available-materials");
 router.post("/", userController.createUser);
-router.put("/:userId", userController.updateUser)
+router.put("/:userId/update", userController.updateUser)
+router.put('/reset-password', userController.resetPassword);
 router.delete("/", userController.deleteUser);
 
 export default router;

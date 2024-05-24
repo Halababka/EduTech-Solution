@@ -295,4 +295,42 @@ export class UserController {
         }
     }
 
+
+    async resetPassword(req, res) {
+        try {
+            const userId = parseInt(req.user.id)
+            const { currentPassword, newPassword } = req.body;
+
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({ error: "Current and new passwords cannot be empty" });
+            }
+
+            const user = await client.user.findUnique({
+                where: { id: userId },
+                select: {password: true}
+            });
+
+            if (!user) {
+                return res.status(404).json({ error: "User not found" });
+            }
+
+            const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+
+            if (!passwordMatch) {
+                return res.status(401).json({ error: "Current password is incorrect" });
+            }
+
+            const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+            await client.user.update({
+                where: { id: userId },
+                data: { password: hashedNewPassword },
+            });
+
+            res.json({ message: "Password successfully updated" });
+        } catch (error) {
+            console.error("Error resetting password:", error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    }
 }

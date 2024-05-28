@@ -34,6 +34,9 @@ router.post('/settings', testValidates.validateSettings, testsController.createT
 router.get('/settings', testsController.getTestSettings)
 router.put('/settings/:id', testValidates.validateSettings, testsController.updateTestSettings)
 
+router.get('/assign/user', testsController.getUserTestAssign)
+router.get('/assign/:id/question', testsController.getAssignQuestions)
+
 router.post('/assign', testValidates.validateAssign, testsController.createTestAssign)
 router.get('/assign', testsController.getTestAssign)
 router.put('/assign/:id', testValidates.validateAssign, testsController.updateTestAssign)

@@ -226,7 +226,10 @@ export class TestsController {
                 where: {
                     id: {in: deleteData}
                 },
-                data: {questionId: null}
+                data: {
+                    questionId: null,
+                    exQuestionId: id
+                }
             })
 
             const createQuery = client.question.update({

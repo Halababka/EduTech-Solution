@@ -161,12 +161,13 @@ model Question {
 }
 
 model Answer {
-  id         Int         @id @default(autoincrement())
-  content    String
-  type       AnswerTypes @default(TEXT)
-  correct    Boolean     @default(false)
-  Question   Question?   @relation(fields: [questionId], references: [id])
-  questionId Int?
+  id           Int         @id @default(autoincrement())
+  content      String
+  type         AnswerTypes @default(TEXT)
+  correct      Boolean     @default(false)
+  Question     Question?   @relation(fields: [questionId], references: [id])
+  questionId   Int?
+  exQuestionId Int?
 }
 
 model TestTemplate {

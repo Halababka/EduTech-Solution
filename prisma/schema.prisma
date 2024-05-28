@@ -165,8 +165,8 @@ model Answer {
   content    String
   type       AnswerTypes @default(TEXT)
   correct    Boolean     @default(false)
-  Question   Question    @relation(fields: [questionId], references: [id])
-  questionId Int
+  Question   Question?   @relation(fields: [questionId], references: [id])
+  questionId Int?
 }
 
 model TestTemplate {

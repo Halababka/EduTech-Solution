@@ -140,7 +140,11 @@ export class TestsController {
         const questions: Question[] = await client.question.findMany({
             include: {
                 subjects: true,
-                answers: true
+                answers: {
+                    orderBy: {
+                        id: 'asc'
+                    }
+                }
             }
         })
         res.json(questions);
@@ -168,23 +172,95 @@ export class TestsController {
             newData.subjectId = subjectId
         }
 
-        if (answers) {
-            newData.answers = {
-                set: answers
-            }
-        }
-
         if (Object.keys(newData).length === 0) {
             return res.status(400).json({error: 'Нет данных для изменения'})
         }
 
-        const updatedQuestion = await client.question.update({
+        const question = await client.question.findUnique({
+            where: {
+                id: id
+            },
+            include: {
+                answers: true
+            }
+        })
+
+        let queries = [];
+
+        if (answers) {
+            const recordsToUpdate = answers.filter(newRecord =>
+                question.answers.some(currentRecord =>
+                        currentRecord.id === newRecord.id && (
+                            currentRecord.content !== newRecord.content ||
+                            currentRecord.correct !== newRecord.correct ||
+                            currentRecord.type !== newRecord.type
+                        )
+                )
+            );
+
+            // Identify records to delete
+            const recordsToDelete = question.answers.filter(currentRecord => !answers.some(newRecord => newRecord.id === currentRecord.id));
+
+            // Identify records to create
+            const recordsToCreate = answers.filter(newRecord => !newRecord.id);
+
+            const updateData = recordsToUpdate.map(answer => ({
+                where: {id: answer.id},
+                data: {
+                    content: answer.content,
+                    type: answer.type,
+                    correct: answer.correct,
+                }
+            }));
+
+            const deleteData = recordsToDelete.map(obj => obj.id);
+
+            const updateQuery = client.question.update({
+                where: {id: id},
+                data: {
+                    answers: {updateMany: updateData}
+                }
+            })
+
+            const deleteQuery = client.answer.updateMany({
+                where: {
+                    id: {in: deleteData}
+                },
+                data: {questionId: null}
+            })
+
+            const createQuery = client.question.update({
+                where: {id: id},
+                data: {
+                    answers: {create: recordsToCreate}
+                }
+            })
+
+            if (updateData.length !== 0) {
+                queries.push(updateQuery)
+            }
+            if (deleteData.length !== 0) {
+                queries.push(deleteQuery)
+            }
+            if (recordsToCreate.length !== 0) {
+                queries.push(createQuery)
+            }
+        }
+
+        let updateQuestion = client.question.update({
             where: {id: id},
             data: newData,
         });
 
-        return res.json(updatedQuestion)
+        queries.push(updateQuestion)
 
+        let updatedQuestion;
+        try {
+            updatedQuestion = await client.$transaction(queries);
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)})
+        }
+        return res.json(updatedQuestion)
     }
 
     async createSubject(req: Request, res: Response) {

@@ -202,15 +202,16 @@ model TestAssign {
   testTemplateId Int
   testSettings   TestSettings @relation(fields: [testSettingsId], references: [id])
   testSettingsId Int
-  groups         Groups[]
   users          UserAssign[]
+  Groups         Groups[]
 }
 
 model UserAssign {
-  user     User       @relation(fields: [userId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
   userId   Int
-  assign   TestAssign @relation(fields: [assignId], references: [id])
+  assign   TestAssign   @relation(fields: [assignId], references: [id])
   assignId Int
+  status   AssignStatus @default(NOT_PASSED)
 
   @@id([userId, assignId])
 }
@@ -230,4 +231,9 @@ enum AnswerTypes {
 enum AssessmentMethod {
   ADAPTIVE
   STATISTICAL
+}
+
+enum AssignStatus {
+  NOT_PASSED
+  PASSED
 }

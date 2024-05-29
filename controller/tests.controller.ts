@@ -591,8 +591,71 @@ export class TestsController {
         return res.json(settings)
     }
 
+    async getUserTestAssign(req: Request, res: Response) {
+        const user_id = (req as any).user.id;
+
+        let assign
+        try {
+            assign = await client.userAssign.findMany({
+                where: {
+                    userId: user_id
+                },
+                include: {
+                    assign: true
+                }
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(assign)
+
+    }
+
+
+    async getAssignQuestions(req: Request, res: Response) {
+        const user_id = (req as any).user.id;
+        const assign_id = parseInt(req.params.id);
+
+        console.log(assign_id)
+
+        let assign
+        try {
+            assign = await client.userAssign.findMany({
+                where: {
+                    AND: [
+                        {userId: user_id},
+                        {assignId: assign_id}
+                    ]
+                },
+                include: {
+                    assign: {
+                        include: {
+                            testTemplate: {
+                                include: {
+                                    subjects: {
+                                        include: {
+                                            questions: true
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        return res.json(assign)
+
+    }
+
     async createTestAssign(req: Request, res: Response) {
-        const {name, testTemplateId, testSettingsId, users, groups} = req.body;
+        const {name, testTemplateId, testSettingsId, users} = req.body;
         const user_id = (req as any).user.id;
 
         if (!testSettingsId && !testTemplateId) {
@@ -627,23 +690,12 @@ export class TestsController {
             }
         }
 
-        if (groups) {
-            try {
-                newData.groups = {
-                    connect: [...groups.map((num: number) => ({id: num}))]
-                }
-            } catch (e) {
-                return res.status(400).json({error: 'Невозможно распарсить массив'});
-            }
-        }
-
         let testAssign: TestAssign;
         try {
             testAssign = await client.testAssign.create({
                 data: newData,
                 include: {
-                    users: true,
-                    groups: true
+                    users: true
                 }
             });
         } catch (e) {
@@ -659,8 +711,7 @@ export class TestsController {
         try {
             assign = await client.testAssign.findMany({
                 include: {
-                    users: true,
-                    groups: true
+                    users: true
                 }
             })
         } catch (e) {
@@ -748,6 +799,6 @@ export class TestsController {
             return
         }
 
-        return res.json(testAssign[1])
+        return res.json(testAssign)
     }
 }

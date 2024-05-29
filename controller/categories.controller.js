@@ -81,9 +81,9 @@ export class CategoriesController {
     async updateCategories(req, res) {
         const {ids, name} = req.body;
         try {
-            const updatedCategories = await client.categories.updateMany({
+            const updatedCategories = await client.categories.update({
                 where: {
-                    id: {in: ids.map(id => parseInt(id))}
+                    id: ids[0]
                 },
                 data: {
                     name
@@ -104,7 +104,8 @@ export class CategoriesController {
                     id: {in: ids.map(id => parseInt(id))}
                 }
             });
-            res.status(204).send();
+
+            res.status(200).json("success");
         } catch (error) {
             console.error("Error deleting categories:", error);
             res.status(500).json({error: "Error deleting categories"});

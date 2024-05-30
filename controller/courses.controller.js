@@ -17,22 +17,33 @@ export class CoursesController {
     }
 
     async getCourse(req, res) {
-        const id = parseInt(req.params.id);
-
-        let course;
-
         try {
-            course = await client.courses.findUnique({
+            const id = parseInt(req.params.id);
+
+            const course = await client.courses.findUnique({
                 where: {
                     id: id
+                },
+                include: {
+                    sections: {
+                        include: {
+                            section_content: {
+                                include: {
+                                    materials: true
+                                }
+                            }
+                        }
+                    },
+                    enrolled_students: true,
+                    course_owners: true,
+                    categories: true
                 }
             });
 
+            res.json(course);
         } catch (e) {
             res.json({error: "Неизвестная ошибка"});
         }
-
-        res.json(course);
     }
 
     async newCourse(req, res) {
@@ -92,12 +103,13 @@ export class CoursesController {
 
     async createCourse(req, res) {
         try {
+            const user_id = req.user.id;
             const {
                 name,
                 description,
                 imageUrl,
-                startsAt,
-                endsAt,
+                startDate,
+                endDate,
                 durationHours,
                 categories,
                 active,
@@ -116,38 +128,103 @@ export class CoursesController {
                 name,
                 description,
                 image_url: imageUrl,
-                starts_at: startsAt,
-                ends_at: endsAt,
+                starts_at: startDate ? startDate : undefined,
+                ends_at: endDate ? endDate : undefined,
                 duration_hours: durationHours,
                 active,
                 sections: {
-                    createMany: {
-                        data: sections.map(section => ({
-                            name: section.name,
-                            description: section.description,
-                            unlocks_at: section.unlocks_at,
-                            section_content: section.sectionContent // Если свойство sectionContent существует, передайте его как есть
-                                ? {
-                                    create: section.sectionContent.map(content => ({
-                                        title: content.title,
-                                        content: content.content
-                                    }))
+                    create: sections.map(section => ({
+                        name: section.name,
+                        description: section.description,
+                        unlocks_at: section.unlocks_at,
+                        subsections: section.subsections ? {
+                            create: section.subsections.map(subsection => ({
+                                name: subsection.name,
+                                description: subsection.description,
+                                unlocks_at: subsection.unlocks_at,
+                                section_content: subsection.contents ? {
+                                    create: subsection.contents.map(content => {
+                                        const contentData = {};
+                                        if (content.title) contentData.title = content.title;
+                                        if (content.content) contentData.content = content.content;
+                                        if (content.urlItem) contentData.urlItem = content.urlItem;
+                                        if (content.urlVideo) contentData.urlVideo = content.urlVideo;
+                                        if (content.folder) {
+                                            contentData.folder = {
+                                                create: {
+                                                    name: content.folder.name,
+                                                    materials: {
+                                                        connect: content.folder.materials.map(material => ({id: material.id}))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (content.materials && content.materials.length > 0) {
+                                            contentData.materials = {
+                                                connect: content.materials.map(material => ({id: material.id}))
+                                            };
+                                        }
+                                        return contentData;
+                                    })
+                                } : undefined
+                            }))
+                        } : undefined,
+                        section_content: section.contents ? {
+                            create: section.contents.map(content => {
+                                const contentData = {};
+                                if (content.title) contentData.title = content.title;
+                                if (content.content) contentData.content = content.content;
+                                if (content.urlItem) contentData.urlItem = content.urlItem;
+                                if (content.urlVideo) contentData.urlVideo = content.urlVideo;
+                                if (content.folder) {
+                                    contentData.folder = {
+                                        create: {
+                                            name: content.folder.name,
+                                            materials: {
+                                                connect: content.folder.materials.map(material => ({id: material.id}))
+                                            }
+                                        }
+                                    }
                                 }
-                                : undefined // Иначе передайте undefined
-                        }))
-                    }
+                                if (content.materials && content.materials.length > 0) {
+                                    contentData.materials = {
+                                        connect: content.materials.map(material => ({id: material.id}))
+                                    };
+                                }
+                                return contentData;
+                            })
+                        } : undefined
+                    }))
                 },
-                enrolled_students: {connect: enrolledStudents.map(student => ({id: student}))},
-                course_owners: {connect: courseOwners.map(owner => ({id: owner}))},
-                categories: {connect: categories.map(category => ({id: category}))}
+                enrolled_students: enrolledStudents ? {connect: enrolledStudents.map(student => ({id: student}))} : {connect: {id: user_id}},
+                course_owners: courseOwners ? {connect: courseOwners.map(owner => ({id: owner}))} : {connect: {id: user_id}},
+                categories: categories ? {connect: categories.map(category => ({id: category.id}))} : undefined
             };
 
             const createdCourse = await client.courses.create({
                 data: courseData,
                 include: {
-                    sections: true,
+                    sections: {
+                        include: {
+                            subsections: {
+                                include: {
+                                    section_content: {
+                                        include: {
+                                            materials: true
+                                        }
+                                    }
+                                }
+                            },
+                            section_content: {
+                                include: {
+                                    materials: true
+                                }
+                            }
+                        }
+                    },
                     enrolled_students: true,
-                    course_owners: true
+                    course_owners: true,
+                    categories: true
                 }
             });
 
@@ -158,7 +235,6 @@ export class CoursesController {
             res.status(500).json({error: "Error creating course"});
         }
     }
-
 
 
     async deleteCourse(req, res) {
@@ -176,8 +252,22 @@ export class CoursesController {
             res.status(500).json({error: dbErrorsHandler(e)});
             return;
         }
-
         res.json(deleteCourse);
+    }
 
+    async deleteCourses(req, res) {
+        try {
+            const {ids} = req.body;
+            await client.courses.deleteMany({
+                where: {
+                    id: {in: ids.map(id => parseInt(id))}
+                }
+            });
+
+            res.status(200).json("success");
+        } catch (error) {
+            console.error("Error deleting courses:", error);
+            res.status(500).json({error: "Error deleting courses"});
+        }
     }
 }

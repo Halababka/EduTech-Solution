@@ -47,7 +47,6 @@ export class FileController {
     }
 
     async uploadFiles(req, res) {
-
         const upload = multer({
             storage: multerS3({
                 s3: s3,
@@ -55,6 +54,7 @@ export class FileController {
                 contentType: multerS3.AUTO_CONTENT_TYPE,
                 acl: "public-read",
                 key: (req, file, cb) => {
+                    console.log(file)
                     cb(null, `uploads/${Date.now()}-${file.originalname}`);
                 }
             }),
@@ -72,7 +72,6 @@ export class FileController {
                 // Сохранение информации о каждом файле в базе данных
                 const savedFiles = await Promise.all(uploadedFiles.map(async (file) => {
                     // Создание записи в базе данных для файла
-                    console.log(file);
                     const savedFile = await client.materials.create({
                         data: {
                             name: file.originalname,

@@ -89,7 +89,7 @@ model Sections {
   id              Int               @id @default(autoincrement())
   name            String
   description     String?
-  unlocks_at      DateTime
+  unlocks_at      DateTime          @default(now())
   materials       Materials[]
   parent          Sections?         @relation("parentId", fields: [parentId], references: [id])
   subsections     Sections[]        @relation("parentId")
@@ -104,8 +104,22 @@ model SectionContents {
   title      String?
   content    String?
   materials  Materials[]
+  urlItem    String?
+  urlVideo   String?
+  folders    Folders[]
   sectioins  Sections    @relation(fields: [sectionsId], references: [id])
   sectionsId Int
+}
+
+model Folders {
+  id                Int              @id @default(autoincrement())
+  name              String
+  parent            Folders?         @relation("FolderTree", fields: [parentId], references: [id])
+  parentId          Int?
+  children          Folders[]        @relation("FolderTree")
+  materials         Materials[]
+  SectionContents   SectionContents? @relation(fields: [sectionContentsId], references: [id])
+  sectionContentsId Int?
 }
 
 model Materials {
@@ -123,6 +137,8 @@ model Materials {
   courses          Courses[]
   userId           Int
   section_contents SectionContents[]
+  Folder           Folders?          @relation(fields: [folderId], references: [id])
+  folderId         Int?
 }
 
 model RegistrationLinks {

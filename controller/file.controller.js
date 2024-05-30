@@ -74,7 +74,7 @@ export class FileController {
                     // Создание записи в базе данных для файла
                     const savedFile = await client.materials.create({
                         data: {
-                            name: file.originalname,
+                            name: decodeURIComponent(file.originalname),
                             description: "",
                             mime_type: file.mimetype,
                             key: file.key,
@@ -83,7 +83,7 @@ export class FileController {
                             size: file.size
                         }
                     });
-                    console.log(`File download to BD: ${savedFile.name}`);
+                    console.log(`File download to BD: ${decodeURIComponent(file.originalname)}`);
                     return savedFile;
                 }));
 

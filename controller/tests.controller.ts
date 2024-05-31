@@ -1,6 +1,7 @@
 import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
 import {json, Request, Response} from 'express'
+import {sendNotificationToUsers} from "../notificationSocket"
 
 import type {
     Subject,
@@ -1031,6 +1032,11 @@ export class TestsController {
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return
+        }
+
+        if (users && users.length > 0) {
+            const enrolledNotificationMessage = `Вам назначен тест "${testAssign.name}"`;
+            sendNotificationToUsers(users, enrolledNotificationMessage);
         }
 
         return res.json(testAssign)

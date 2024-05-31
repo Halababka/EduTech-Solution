@@ -54,8 +54,8 @@ export class FileController {
                 contentType: multerS3.AUTO_CONTENT_TYPE,
                 acl: "public-read",
                 key: (req, file, cb) => {
-                    console.log(file)
-                    cb(null, `uploads/${Date.now()}-${file.originalname}`);
+                    const filename = decodeURIComponent(file.originalname)
+                    cb(null, `uploads/${Date.now()}-${filename}`);
                 }
             }),
             limits: {fileSize: 1024 * 1024 * 1024} // 1GB лимит файла
@@ -102,7 +102,7 @@ export class FileController {
         try {
             // Проверяем, является ли fileId числом
             if (isNaN(fileId)) {
-                return res.status(400).json({ error: "File ID must be a number" });
+                return res.status(400).json({error: "File ID must be a number"});
             }
             // Извлекаем информацию о файле из базы данных
             const file = await client.materials.findUnique({
@@ -126,7 +126,7 @@ export class FileController {
             const encodedFileName = encodeURIComponent(file.name);
 
             // Устанавливаем заголовок Content-Disposition для скачивания файла с указанием его имени
-            res.setHeader('Content-Disposition', `attachment; filename="${encodedFileName}"`);
+            res.setHeader("Content-Disposition", `attachment; filename="${encodedFileName}"`);
 
 
             // Отправляем файл в ответ на запрос

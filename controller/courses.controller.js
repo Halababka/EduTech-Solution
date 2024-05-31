@@ -1,5 +1,7 @@
 import { client } from "../db.js";
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
+import { sendNotificationToUser, sendNotificationToUsers } from "../notificationSocket.js";
+
 
 export class CoursesController {
 
@@ -157,7 +159,7 @@ export class CoursesController {
                                                         connect: content.folder.materials.map(material => ({id: material.id}))
                                                     }
                                                 }
-                                            }
+                                            };
                                         }
                                         if (content.materials && content.materials.length > 0) {
                                             contentData.materials = {
@@ -184,7 +186,7 @@ export class CoursesController {
                                                 connect: content.folder.materials.map(material => ({id: material.id}))
                                             }
                                         }
-                                    }
+                                    };
                                 }
                                 if (content.materials && content.materials.length > 0) {
                                     contentData.materials = {
@@ -196,7 +198,7 @@ export class CoursesController {
                         } : undefined
                     }))
                 },
-                enrolled_students: enrolledStudents ? {connect: enrolledStudents.map(student => ({id: student}))} : {connect: {id: user_id}},
+                enrolled_students: enrolledStudents ? {connect: enrolledStudents.map(student => ({id: student.id}))} : {connect: {id: user_id}},
                 course_owners: courseOwners ? {connect: courseOwners.map(owner => ({id: owner}))} : {connect: {id: user_id}},
                 categories: categories ? {connect: categories.map(category => ({id: category.id}))} : undefined
             };
@@ -227,6 +229,26 @@ export class CoursesController {
                     categories: true
                 }
             });
+
+            // Отправка уведомлений, без ожидания их завершения (не гарантирует доставку, ускоряет время работы)
+            // Для улучшения нужен менеджер очередей kafka
+
+            // 1. Уведомления для всех участников курса
+            if (enrolledStudents && enrolledStudents.length > 0) {
+                const enrolledStudentsIds = enrolledStudents.map(student => student.id);
+                const enrolledNotificationMessage = `Вы были записаны на курс "${name}"`;
+                sendNotificationToUsers(enrolledStudentsIds, enrolledNotificationMessage);
+            }
+
+            // 2. Уведомления для всех владельцев курса, кроме начального user_id
+            const courseOwnersIds = courseOwners && courseOwners.length > 0
+                ? [...courseOwners.map(owner => owner.id), user_id]
+                : [user_id];
+
+            const courseOwnersNotificationMessage = `Вам были предоставлены права на курс "${name}"`;
+            sendNotificationToUsers(courseOwnersIds, courseOwnersNotificationMessage);
+
+
 
             // Отправка созданного курса в ответ
             res.status(201).json(createdCourse);

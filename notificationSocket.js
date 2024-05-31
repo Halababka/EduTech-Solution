@@ -21,6 +21,17 @@ export function setupNotificationSocket() {
 }
 
 export function sendNotificationToUser(userId, notificationMessage) {
-    // Отправляем уведомление с помощью сокета
-    notificationSocket.emit('sendNotification', { userId, message: notificationMessage });
+    // Отправляем уведомление с помощью сокета одному пользователю
+    notificationSocket.emit('sendNotification', { recipientId: userId, message: notificationMessage });
+}
+
+export async function sendNotificationToUsers(userIds, notificationMessage) {
+    userIds.forEach(userId => {
+        try {
+            // Отправка уведомления каждому пользователю
+            sendNotificationToUser(userId, notificationMessage);
+        } catch (error) {
+            console.error(`Error sending notification to user ${userId}:`, error);
+        }
+    });
 }

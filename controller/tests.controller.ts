@@ -747,6 +747,10 @@ export class TestsController {
             }
         });
 
+        if (assign[0].status === 'PASSED') {
+            return res.status(403).json({error: 'Данный тест уже завершён'})
+        }
+
         for (let i = 0; i < assign.length; i++) {
             for (let j = 0; j < assign[i].assign.testTemplate.subjects.length; j++) {
                 assign[i].assign.testTemplate.subjects[j] = await fetchSubjectsWithChildren(assign[i].assign.testTemplate.subjects[j].id);
@@ -966,23 +970,8 @@ export class TestsController {
                 return res.json(questionsBySubject)
             }
 
-            // Значит текущий вопрос есть, на него пришёл ответ(может и не пришёл)
-
-            // Произвести проверку верности, занести в таблицу и пересчитать сложность
-
             // Если вопросов нет или выполнились условия завершения, завершить тест
         }
-
-        // console.log(subjuects[0].find(obj => obj.id === question_id))
-
-        // console.log(createAnswerObject(selected, subjects[0]));
-        // console.log(checkAnswerCorrect(selected, subjects[0]));
-        // console.log(createAnswerObject(selected, subjects[1]));
-        // console.log(checkAnswerCorrect(selected, subjects[1]));
-        // console.log(createAnswerObject(selected, subjects[2]));
-        // console.log(checkAnswerCorrect(selected, subjects[2]));
-
-        return res.json(questions)
     }
 
     async createTestAssign(req: Request, res: Response) {

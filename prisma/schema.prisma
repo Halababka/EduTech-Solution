@@ -89,7 +89,7 @@ model Sections {
   id              Int               @id @default(autoincrement())
   name            String
   description     String?
-  unlocks_at      DateTime          @default(now())
+  unlocks_at      DateTime
   materials       Materials[]
   parent          Sections?         @relation("parentId", fields: [parentId], references: [id])
   subsections     Sections[]        @relation("parentId")
@@ -104,22 +104,8 @@ model SectionContents {
   title      String?
   content    String?
   materials  Materials[]
-  urlItem    String?
-  urlVideo   String?
-  folders    Folders[]
   sectioins  Sections    @relation(fields: [sectionsId], references: [id])
   sectionsId Int
-}
-
-model Folders {
-  id                Int              @id @default(autoincrement())
-  name              String
-  parent            Folders?         @relation("FolderTree", fields: [parentId], references: [id])
-  parentId          Int?
-  children          Folders[]        @relation("FolderTree")
-  materials         Materials[]
-  SectionContents   SectionContents? @relation(fields: [sectionContentsId], references: [id])
-  sectionContentsId Int?
 }
 
 model Materials {
@@ -137,8 +123,6 @@ model Materials {
   courses          Courses[]
   userId           Int
   section_contents SectionContents[]
-  Folder           Folders?          @relation(fields: [folderId], references: [id])
-  folderId         Int?
 }
 
 model RegistrationLinks {
@@ -167,13 +151,15 @@ model Subject {
 }
 
 model Question {
-  id        Int           @id @default(autoincrement())
-  text      String
-  type      QuestionTypes @default(ONE_ANSWER)
-  subjects  Subject?      @relation(fields: [subjectId], references: [id])
-  answers   Answer[]
-  level     Int?
-  subjectId Int?
+  id            Int             @id @default(autoincrement())
+  text          String
+  type          QuestionTypes   @default(ONE_ANSWER)
+  subjects      Subject?        @relation(fields: [subjectId], references: [id])
+  answers       Answer[]
+  level         Int?
+  subjectId     Int?
+  UserAssign    UserAssign[]
+  UserQuestions UserQuestions[]
 }
 
 model Answer {
@@ -223,13 +209,40 @@ model TestAssign {
 }
 
 model UserAssign {
-  user     User         @relation(fields: [userId], references: [id])
-  userId   Int
-  assign   TestAssign   @relation(fields: [assignId], references: [id])
-  assignId Int
-  status   AssignStatus @default(NOT_PASSED)
+  id              Int             @id @default(autoincrement())
+  user            User            @relation(fields: [userId], references: [id])
+  userId          Int
+  assign          TestAssign      @relation(fields: [assignId], references: [id])
+  assignId        Int
+  status          AssignStatus    @default(NOT_PASSED)
+  startTime       DateTime?
+  endTime         DateTime?
+  currentQuestion Question?       @relation(fields: [questionId], references: [id])
+  questionId      Int?
+  UserQuestions   UserQuestions[]
+}
 
-  @@id([userId, assignId])
+model UserQuestions {
+  id           Int                   @id @default(autoincrement())
+  userAssign   UserAssign            @relation(fields: [userAssignId], references: [id])
+  userAssignId Int
+  question     Question              @relation(fields: [questionId], references: [id])
+  questionId   Int
+  answerTime   DateTime              @default(now())
+  level        Float
+  answer       UserQuestionsAnswer[]
+}
+
+model UserQuestionsAnswer {
+  id                Int            @id @default(autoincrement())
+  content           String
+  answeredContent   String?
+  type              AnswerTypes    @default(TEXT)
+  correct           Boolean        @default(false)
+  selected          Boolean        @default(false)
+  AnsweredCorrectly Boolean        @default(false)
+  UserQuestions     UserQuestions? @relation(fields: [userQuestionsId], references: [id])
+  userQuestionsId   Int?
 }
 
 enum QuestionTypes {

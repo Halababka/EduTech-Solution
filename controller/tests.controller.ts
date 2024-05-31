@@ -35,6 +35,108 @@ function now() {
     });
 }
 
+async function fetchSubjectsWithChildren(subjectId) {
+    const subject = await client.subject.findUnique({
+        where: {id: subjectId},
+        include: {
+            questions: {
+                include: {
+                    answers: true
+                }
+            },
+            children: true
+        }
+    });
+
+    if (subject.children.length > 0) {
+        subject.children = await Promise.all(
+            subject.children.map(child => fetchSubjectsWithChildren(child.id))
+        );
+    }
+
+    return subject;
+}
+
+function collectQuestions(data) {
+    const questions = [];
+
+    function recurse(items) {
+        for (const item of items) {
+            if (item.questions && item.questions.length) {
+                questions.push(...item.questions);
+            }
+            if (item.children && item.children.length) {
+                recurse(item.children);
+            }
+        }
+    }
+
+    recurse(data);
+    return questions;
+}
+
+function createAnswerObject(selected, question) {
+    if (question.type !== 'TEXT_ANSWER') {
+        return question.answers.map(answer => {
+            return {
+                // "id": answer.id,
+                "content": answer.content,
+                "type": answer.type,
+                "correct": answer.correct,
+                "selected": selected.ids.includes(answer.id),
+                "AnsweredCorrectly": answer.correct && selected.ids.includes(answer.id)
+            }
+        })
+    } else {
+        return {
+            id: question.answers[0].id,
+            content: question.answers[0].content,
+            answeredContent: selected.text_answer,
+            type: question.answers[0].type,
+            correct: question.answers[0].correct,
+            selected: selected.text_answer === question.answers[0].content,
+            AnsweredCorrectly: selected.text_answer === question.answers[0].content
+        }
+    }
+}
+
+function checkAnswerCorrect(selected, question) {
+    if (question.type === 'TEXT_ANSWER') {
+        return question.answers[0].content === selected.text_answer;
+    } else if (question.type === 'MANY_ANSWERS') {
+        // Получаем массив правильных ответов из вопроса
+        const correctAnswers = question.answers.filter(answer => answer.correct).map(answer => answer.id);
+
+        // Проверяем, что все выбранные ответы правильные
+        const allSelectedCorrect = selected.ids.every(id => correctAnswers.includes(id));
+
+        // Проверяем, что количество выбранных правильных ответов совпадает с количеством правильных ответов
+        const allCorrectSelected = correctAnswers.every(id => selected.ids.includes(id));
+
+        return allSelectedCorrect && allCorrectSelected;
+    } else if (question.type === 'ONE_ANSWER') {
+        // Проверяем, что выбран ровно один ответ и он правильный
+        return selected.ids.length === 1 && question.answers.some(answer => answer.id === selected.ids[0] && answer.correct);
+    } else {
+        return false;
+    }
+}
+
+function findClosestQuestion(questions, averageLevel) {
+    let closestQuestion = null;
+    let minDifference = Infinity;
+
+    questions.forEach(question => {
+        let difference = Math.abs(question.level - averageLevel);
+        if (difference < minDifference || (difference === minDifference && question.level > averageLevel)) {
+            minDifference = difference;
+            closestQuestion = question;
+        }
+    });
+
+    return closestQuestion;
+}
+
 export class TestsController {
     async createAnswer(req: Request, res: Response) {
         const questionId = parseInt(req.params.questionId);
@@ -613,45 +715,273 @@ export class TestsController {
 
     }
 
-
     async getAssignQuestions(req: Request, res: Response) {
+        const {ids, text_answer} = req.body;
         const user_id = (req as any).user.id;
-        const assign_id = parseInt(req.params.id);
+        const assign_id = parseInt(req.params.assign_id);
 
-        console.log(assign_id)
-
-        let assign
-        try {
-            assign = await client.userAssign.findMany({
-                where: {
-                    AND: [
-                        {userId: user_id},
-                        {assignId: assign_id}
-                    ]
-                },
-                include: {
-                    assign: {
-                        include: {
-                            testTemplate: {
-                                include: {
-                                    subjects: {
-                                        include: {
-                                            questions: true
-                                        }
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            })
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
+        let selected = {
+            ids: ids,
+            text_answer: text_answer
         }
 
-        return res.json(assign)
+        const assign = await client.userAssign.findMany({
+            where: {
+                AND: [
+                    {userId: user_id},
+                    {assignId: assign_id}
+                ]
+            },
+            include: {
+                UserQuestions: true,
+                assign: {
+                    include: {
+                        testTemplate: {
+                            include: {
+                                subjects: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
+        for (let i = 0; i < assign.length; i++) {
+            for (let j = 0; j < assign[i].assign.testTemplate.subjects.length; j++) {
+                assign[i].assign.testTemplate.subjects[j] = await fetchSubjectsWithChildren(assign[i].assign.testTemplate.subjects[j].id);
+            }
+        }
+
+        const questions = collectQuestions(assign[0].assign.testTemplate.subjects)
+
+        if (assign[0].questionId === null) {
+            console.log('Тест начинается. Подбираю первый вопрос')
+            // Выбираем первый вопрос
+            // Средняя сложность среди всех вопросов всех тем
+            const firstSubject = questions[0].subjectId
+            const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
+            const averageLevel = questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+
+            // Ищем ближайший вопрос к этой сложности
+            const currentQuestion = findClosestQuestion(questionsBySubject, averageLevel)
+
+            // Сохраняем в базу текущий вопрос
+            try {
+                await client.userAssign.update({
+                    where: {
+                        id: assign[0].id
+                    },
+                    data: {
+                        startTime: new Date(),
+                        questionId: currentQuestion.id,
+                        UserQuestions: {
+                            create: [
+                                {
+                                    question: {
+                                        connect: {id: currentQuestion.id} // Connect to an existing Question
+                                    },
+                                    level: averageLevel
+                                }
+                            ]
+                        }
+                    }
+                })
+            } catch (e) {
+                res.status(500).json({error: dbErrorsHandler(e)})
+                return
+            }
+            return res.status(200).json(currentQuestion)
+        } else {
+            // Есть ответ на текущий
+            if (ids || text_answer) {
+                //TODO: Проверерка если на текущий уже отвечали
+                console.log('Ответ есть, проверяю правильность')
+
+                const currentQuestion = questions.find(question => question.id === assign[0].questionId)
+
+                if (currentQuestion.type !== 'TEXT_ANSWER' && !ids) {
+                    return res.status(400).json({error: 'Не дан ответ на вопрос'})
+                }
+                if (currentQuestion.type == 'TEXT_ANSWER' && !text_answer) {
+                    return res.status(400).json({error: 'Не дан ответ на вопрос'})
+                }
+
+                // Ищем в какой UserQuestions будем заносить
+                const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
+
+                // Заносим в базу отвеченные
+                try {
+                    await client.userQuestions.update({
+                        where: {
+                            id: userQuestion.id
+                        },
+                        data: {
+                            answer: {
+                                create: createAnswerObject(selected, currentQuestion)
+                            }
+                        }
+                    })
+                } catch (e) {
+                    console.log(e)
+                    res.status(500).json({error: dbErrorsHandler(e)})
+                    return
+                }
+
+                // Если ответили верно, увеличить сложность, иначе уменьшить
+                if (checkAnswerCorrect(selected, currentQuestion)) {
+                    // Увеличиваем сложность
+                    console.log('Оцениваю: Увеличиваем сложность')
+                } else {
+                    // Уменьшаем сложность
+                    console.log('Оцениваю: Уменьшаем сложность')
+                }
+
+                //     Подобрать и спросить следущий вопрос, учитывая тему и т.п.
+                //     И которого нет в уже отвеченных
+                const askedQuestions = assign[0].UserQuestions
+
+                // Номер темы предыдущего вопроса
+                const lastSubject = currentQuestion.subjectId
+
+                // Выбираем вопросы из этой темы
+                const questionSet = questions.filter(question => question.subjectId === lastSubject)
+
+                // Создаем массив идентификаторов уже заданных вопросов
+                const askedQuestionIds = askedQuestions.map(q => q.questionId);
+
+                // Фильтруем исходный массив вопросов
+                const filteredQuestionSet = questionSet.filter(q => !askedQuestionIds.includes(q.id));
+
+                // Если вопросов нет, то переходим к следующей теме
+                if (filteredQuestionSet.length === 0) {
+                    console.log('Вопросы в теме закончились. Подбираю новый вопрос')
+                    // Берём оставшиеся вопросы, которые не были заданы
+                    const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))
+                    if (lostQuestions.length === 0) {
+
+                        try {
+                            await client.userAssign.update({
+                                where: {
+                                    id: assign[0].id
+                                },
+                                data: {
+                                    status: 'PASSED',
+                                    endTime: new Date()
+                                }
+                            })
+                        } catch (e) {
+                            res.status(500).json({error: dbErrorsHandler(e)})
+                            return
+                        }
+
+                        return res.json('Завершаем тестирование')
+                    }
+                    // Выбираем новую главную тему
+                    const firstSubject = lostQuestions[0].subjectId
+                    const questionsBySubject = lostQuestions.filter(question => question.subjectId === firstSubject)
+                    const averageLevel = questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+
+                    // Ищем ближайший вопрос к этой сложности
+                    const currentQuestion = findClosestQuestion(questionsBySubject, averageLevel)
+
+                    // Сохраняем в базу текущий вопрос
+                    try {
+                        await client.userAssign.update({
+                            where: {
+                                id: assign[0].id
+                            },
+                            data: {
+                                questionId: currentQuestion.id,
+                                UserQuestions: {
+                                    create: [
+                                        {
+                                            question: {
+                                                connect: {id: currentQuestion.id} // Connect to an existing Question
+                                            },
+                                            level: averageLevel
+                                        }
+                                    ]
+                                }
+                            }
+                        })
+                    } catch (e) {
+                        res.status(500).json({error: dbErrorsHandler(e)})
+                        return
+                    }
+                    return res.status(200).json(currentQuestion)
+                }
+
+                // TODO: ТУТ КАКОЙ-ТО ВОПРОС С ТЕМ ОТКУДА ОН БЕРЁТ НУЖНЫЕ ВОПРОСЫ ИМЕННО С ТЕМОЙ СВЯЗАННЫХ
+                // TODO: CURRENT QUESTION ВОЗМОЖНО НЕ ТОТ КОТОРЫЙ ИДЁТ, А ТОТ КОТОРЫЙ БУДЕТ ЗАДАН
+
+                console.log('Подбираю следующий вопрос в той же теме')
+
+                // Берём доступный список вопросов
+                const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))
+
+                // Берём вопросы связанные с этой темой
+                const questionSetBySubject = lostQuestions.filter(question => question.subjectId === currentQuestion.subjectId)
+
+                // Подбираем следующий вопрос
+                const newQuestion = findClosestQuestion(questionSetBySubject, 8)
+
+                // Сохраняем в базу текущий вопрос
+                try {
+                    await client.userAssign.update({
+                        where: {
+                            id: assign[0].id
+                        },
+                        data: {
+                            questionId: newQuestion.id,
+                            UserQuestions: {
+                                create: [
+                                    {
+                                        question: {
+                                            connect: {id: newQuestion.id} // Connect to an existing Question
+                                        },
+                                        level: 8
+                                    }
+                                ]
+                            }
+                        }
+                    })
+                } catch (e) {
+                    res.status(500).json({error: dbErrorsHandler(e)})
+                    return
+                }
+                return res.status(200).json(newQuestion)
+            } else {
+                //     Ответа нет, повторяем вопрос
+                const questionsBySubject: any = questions.find(question => question.id === assign[0].questionId)
+
+                if (questionsBySubject.type === 'TEXT_ANSWER') {
+                    delete questionsBySubject.answers;
+                } else {
+                    questionsBySubject.answers.forEach(answer => {
+                        delete answer.correct;
+                    });
+                }
+
+                return res.json(questionsBySubject)
+            }
+
+            // Значит текущий вопрос есть, на него пришёл ответ(может и не пришёл)
+
+            // Произвести проверку верности, занести в таблицу и пересчитать сложность
+
+            // Если вопросов нет или выполнились условия завершения, завершить тест
+        }
+
+        // console.log(subjuects[0].find(obj => obj.id === question_id))
+
+        // console.log(createAnswerObject(selected, subjects[0]));
+        // console.log(checkAnswerCorrect(selected, subjects[0]));
+        // console.log(createAnswerObject(selected, subjects[1]));
+        // console.log(checkAnswerCorrect(selected, subjects[1]));
+        // console.log(createAnswerObject(selected, subjects[2]));
+        // console.log(checkAnswerCorrect(selected, subjects[2]));
+
+        return res.json(questions)
     }
 
     async createTestAssign(req: Request, res: Response) {
@@ -779,7 +1109,6 @@ export class TestsController {
                     },
                     data: deleteData,
                     include: {
-                        groups: true,
                         users: true
                     }
                 }),
@@ -789,7 +1118,6 @@ export class TestsController {
                     },
                     data: newData,
                     include: {
-                        groups: true,
                         users: true
                     }
                 })

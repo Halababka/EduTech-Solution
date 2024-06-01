@@ -13,6 +13,8 @@ import type {
     TestSettings, TestAssign
 } from '@prisma/client'
 
+const debug = false
+
 async function checkCircularReference(id: number, parentId: number, res: Response) {
     // Fetch the parent
     const parent = await client.subject.findUnique({where: {id: parentId}});
@@ -48,32 +50,12 @@ async function fetchSubjectsWithChildren(subjectId) {
             children: true
         }
     });
-
     if (subject.children.length > 0) {
         subject.children = await Promise.all(
             subject.children.map(child => fetchSubjectsWithChildren(child.id))
         );
     }
-
     return subject;
-}
-
-function collectQuestions(data) {
-    const questions = [];
-
-    function recurse(items) {
-        for (const item of items) {
-            if (item.questions && item.questions.length) {
-                questions.push(...item.questions);
-            }
-            if (item.children && item.children.length) {
-                recurse(item.children);
-            }
-        }
-    }
-
-    recurse(data);
-    return questions;
 }
 
 function createAnswerObject(selected, question) {
@@ -89,15 +71,15 @@ function createAnswerObject(selected, question) {
             }
         })
     } else {
-        return {
-            id: question.answers[0].id,
+        return [{
+            // id: question.answers[0].id,
             content: question.answers[0].content,
             answeredContent: selected.text_answer,
             type: question.answers[0].type,
             correct: question.answers[0].correct,
             selected: selected.text_answer === question.answers[0].content,
             AnsweredCorrectly: selected.text_answer === question.answers[0].content
-        }
+        }]
     }
 }
 
@@ -136,6 +118,39 @@ function findClosestQuestion(questions, averageLevel) {
     });
 
     return closestQuestion;
+}
+
+function collectQuestions(assign) {
+    const result = [];
+    let answerIdCounter = 1;
+
+    for (let i = 0; i < assign.length; i++) {
+        const subjectsSettings = assign[i].assign.testTemplate.subjectsSettings;
+        for (let j = 0; j < subjectsSettings.length; j++) {
+            const questions = subjectsSettings[j].Subject.questions;
+            for (let k = 0; k < questions.length; k++) {
+                const question = questions[k];
+                const transformedQuestion = {
+                    id: question.id,
+                    text: question.text,
+                    type: question.type,
+                    level: question.level,
+                    subjectId: question.subjectId,
+                    answers: question.answers ? question.answers.map(answer => ({
+                        id: answerIdCounter++,
+                        content: answer.content,
+                        type: "TEXT",
+                        correct: answer.correct,
+                        questionId: question.id,
+                        exQuestionId: null
+                    })) : []
+                };
+                result.push(transformedQuestion);
+            }
+        }
+    }
+
+    return result;
 }
 
 export class TestsController {
@@ -506,10 +521,17 @@ export class TestsController {
 
         newData.name = name ? name : `Шаблон от ${now()}`
 
+        const subjectNames = await client.subject.findMany({})
+
+        const newSubjects = subjects.map(subject => {
+            const matchingSubjectName = subjectNames.find(name => name.id === subject.subjectId);
+            return {...subject, subjectName: matchingSubjectName?.name};
+        });
+
         if (subjects) {
             try {
-                newData.subjects = {
-                    connect: [...subjects.map((num: number) => ({id: num}))]
+                newData.subjectsSettings = {
+                    create: newSubjects
                 }
             } catch (e) {
                 return res.status(400).json({error: 'Невозможно распарсить массив'});
@@ -521,17 +543,14 @@ export class TestsController {
         let template: TestTemplate
         try {
             template = await client.testTemplate.create({
-                data: newData,
-                include: {
-                    subjects: true
-                }
+                data: newData
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return
         }
 
-        return res.json(template)
+        return res.status(201).json(template)
     }
 
     async getTestTemplates(req: Request, res: Response) {
@@ -540,7 +559,7 @@ export class TestsController {
         try {
             templates = await client.testTemplate.findMany({
                 include: {
-                    subjects: true
+                    subjectsSettings: true
                 }
             })
         } catch (e) {
@@ -716,7 +735,7 @@ export class TestsController {
 
     }
 
-    async getAssignQuestions(req: Request, res: Response) {
+    async nextQuestion(req: Request, res: Response) {
         const {ids, text_answer} = req.body;
         const user_id = (req as any).user.id;
         const assign_id = parseInt(req.params.assign_id);
@@ -739,7 +758,19 @@ export class TestsController {
                     include: {
                         testTemplate: {
                             include: {
-                                subjects: true
+                                subjectsSettings: {
+                                    include: {
+                                        Subject: {
+                                            include: {
+                                                questions: {
+                                                    include: {
+                                                        answers: true
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -751,24 +782,19 @@ export class TestsController {
             return res.status(403).json({error: 'Данный тест уже завершён'})
         }
 
-        for (let i = 0; i < assign.length; i++) {
-            for (let j = 0; j < assign[i].assign.testTemplate.subjects.length; j++) {
-                assign[i].assign.testTemplate.subjects[j] = await fetchSubjectsWithChildren(assign[i].assign.testTemplate.subjects[j].id);
-            }
-        }
-
-        const questions = collectQuestions(assign[0].assign.testTemplate.subjects)
+        const questions = collectQuestions(assign)
 
         if (assign[0].questionId === null) {
-            console.log('Тест начинается. Подбираю первый вопрос')
+            debug && console.log('Тест начинается. Подбираю первый вопрос')
             // Выбираем первый вопрос
             // Средняя сложность среди всех вопросов всех тем
             const firstSubject = questions[0].subjectId
             const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
-            const averageLevel = questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+
+            const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
 
             // Ищем ближайший вопрос к этой сложности
-            const currentQuestion = findClosestQuestion(questionsBySubject, averageLevel)
+            const currentQuestion = findClosestQuestion(questionsBySubject, initLevel)
 
             // Сохраняем в базу текущий вопрос
             try {
@@ -783,9 +809,9 @@ export class TestsController {
                             create: [
                                 {
                                     question: {
-                                        connect: {id: currentQuestion.id} // Connect to an existing Question
+                                        connect: {id: currentQuestion.id}
                                     },
-                                    level: averageLevel
+                                    level: initLevel
                                 }
                             ]
                         }
@@ -800,10 +826,9 @@ export class TestsController {
             // Есть ответ на текущий
             if (ids || text_answer) {
                 //TODO: Проверерка если на текущий уже отвечали
-                console.log('Ответ есть, проверяю правильность')
+                debug && console.log('Ответ есть, проверяю правильность')
 
                 const currentQuestion = questions.find(question => question.id === assign[0].questionId)
-
                 if (currentQuestion.type !== 'TEXT_ANSWER' && !ids) {
                     return res.status(400).json({error: 'Не дан ответ на вопрос'})
                 }
@@ -813,6 +838,27 @@ export class TestsController {
 
                 // Ищем в какой UserQuestions будем заносить
                 const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
+
+                // Рассчитываем коэффициент вопроса
+                const coefficient = 1 / userQuestion.level
+
+                let newLevel;
+
+                debug && console.log('Текущая сложность', userQuestion.level)
+                debug && console.log('Коэффициент', coefficient)
+                // Если ответили верно, увеличить сложность, иначе уменьшить
+                if (checkAnswerCorrect(selected, currentQuestion)) {
+                    // Увеличиваем сложность
+                    newLevel = userQuestion.level + coefficient
+                    debug && console.log('Оцениваю: Увеличиваем сложность', newLevel)
+                } else {
+                    // Уменьшаем сложность
+                    newLevel = userQuestion.level - coefficient
+                    debug && console.log('Оцениваю: Уменьшаем сложность', newLevel)
+                    if (newLevel < 0) {
+                        newLevel = 0
+                    }
+                }
 
                 // Заносим в базу отвеченные
                 try {
@@ -827,18 +873,8 @@ export class TestsController {
                         }
                     })
                 } catch (e) {
-                    console.log(e)
                     res.status(500).json({error: dbErrorsHandler(e)})
                     return
-                }
-
-                // Если ответили верно, увеличить сложность, иначе уменьшить
-                if (checkAnswerCorrect(selected, currentQuestion)) {
-                    // Увеличиваем сложность
-                    console.log('Оцениваю: Увеличиваем сложность')
-                } else {
-                    // Уменьшаем сложность
-                    console.log('Оцениваю: Уменьшаем сложность')
                 }
 
                 //     Подобрать и спросить следущий вопрос, учитывая тему и т.п.
@@ -859,11 +895,14 @@ export class TestsController {
 
                 // Если вопросов нет, то переходим к следующей теме
                 if (filteredQuestionSet.length === 0) {
-                    console.log('Вопросы в теме закончились. Подбираю новый вопрос')
+                    debug && console.log('Вопросы в теме закончились. Подбираю новый вопрос')
                     // Берём оставшиеся вопросы, которые не были заданы
                     const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))
-                    if (lostQuestions.length === 0) {
 
+                    // Вопросов не осталось, завершаю тест
+                    if (lostQuestions.length === 0) {
+                        // Добавить последнюю сложность в отвеченный последним вопрос
+                        debug && console.log('Вопросов не осталось, завершаю тест')
                         try {
                             await client.userAssign.update({
                                 where: {
@@ -881,13 +920,16 @@ export class TestsController {
 
                         return res.json('Завершаем тестирование')
                     }
+
                     // Выбираем новую главную тему
                     const firstSubject = lostQuestions[0].subjectId
                     const questionsBySubject = lostQuestions.filter(question => question.subjectId === firstSubject)
-                    const averageLevel = questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
 
-                    // Ищем ближайший вопрос к этой сложности
-                    const currentQuestion = findClosestQuestion(questionsBySubject, averageLevel)
+                    const initLevel = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+
+                    const currentQuestion = findClosestQuestion(questionsBySubject, initLevel)
+
+                    debug && console.log('Стартовая сложность новой темы: ', initLevel)
 
                     // Сохраняем в базу текущий вопрос
                     try {
@@ -901,9 +943,9 @@ export class TestsController {
                                     create: [
                                         {
                                             question: {
-                                                connect: {id: currentQuestion.id} // Connect to an existing Question
+                                                connect: {id: currentQuestion.id}
                                             },
-                                            level: averageLevel
+                                            level: initLevel
                                         }
                                     ]
                                 }
@@ -919,7 +961,7 @@ export class TestsController {
                 // TODO: ТУТ КАКОЙ-ТО ВОПРОС С ТЕМ ОТКУДА ОН БЕРЁТ НУЖНЫЕ ВОПРОСЫ ИМЕННО С ТЕМОЙ СВЯЗАННЫХ
                 // TODO: CURRENT QUESTION ВОЗМОЖНО НЕ ТОТ КОТОРЫЙ ИДЁТ, А ТОТ КОТОРЫЙ БУДЕТ ЗАДАН
 
-                console.log('Подбираю следующий вопрос в той же теме')
+                debug && console.log('Подбираю следующий вопрос в той же теме')
 
                 // Берём доступный список вопросов
                 const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))
@@ -944,7 +986,7 @@ export class TestsController {
                                         question: {
                                             connect: {id: newQuestion.id} // Connect to an existing Question
                                         },
-                                        level: 8
+                                        level: newLevel
                                     }
                                 ]
                             }

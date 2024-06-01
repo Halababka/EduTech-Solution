@@ -140,14 +140,15 @@ model RegistrationLinks {
 
 // Тестирование:
 model Subject {
-  id             Int           @id @default(autoincrement())
-  name           String
-  questions      Question[]
-  parent         Subject?      @relation("ParentChild", fields: [parentId], references: [id])
-  parentId       Int?
-  TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
-  testTemplateId Int?
-  children       Subject[]     @relation("ParentChild")
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  questions            Question[]
+  parent               Subject?               @relation("ParentChild", fields: [parentId], references: [id])
+  parentId             Int?
+  // TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
+  // testTemplateId Int?
+  children             Subject[]              @relation("ParentChild")
+  TestTemplateSubjects TestTemplateSubjects[]
 }
 
 model Question {
@@ -173,26 +174,37 @@ model Answer {
 }
 
 model TestTemplate {
-  id         Int          @id @default(autoincrement())
-  name       String
-  author     User         @relation(fields: [authorId], references: [id])
-  authorId   Int
-  TestAssign TestAssign[]
-  subjects   Subject[]
+  id               Int                    @id @default(autoincrement())
+  name             String
+  author           User                   @relation(fields: [authorId], references: [id])
+  authorId         Int
+  TestAssign       TestAssign[]
+  subjectsSettings TestTemplateSubjects[]
+  // Subject          Subject[]
+}
+
+model TestTemplateSubjects {
+  id                Int           @id @default(autoincrement())
+  TestTemplate      TestTemplate? @relation(fields: [testTemplateId], references: [id])
+  testTemplateId    Int?
+  Subject           Subject       @relation(fields: [subjectId], references: [id])
+  subjectId         Int
+  subjectName       String
+  initialDifficulty Int?
+  threshold         Float
 }
 
 model TestSettings {
-  id                Int              @id @default(autoincrement())
-  name              String
-  author            User             @relation(fields: [authorId], references: [id])
-  authorId          Int
-  startTime         DateTime?
-  endTime           DateTime?
-  duration          Int?
-  attemptsCount     Int?
-  assessmentMethod  AssessmentMethod @default(ADAPTIVE)
-  initialDifficulty Int?
-  TestAssign        TestAssign[]
+  id               Int              @id @default(autoincrement())
+  name             String
+  author           User             @relation(fields: [authorId], references: [id])
+  authorId         Int
+  startTime        DateTime?
+  endTime          DateTime?
+  duration         Int?
+  attemptsCount    Int?
+  assessmentMethod AssessmentMethod @default(ADAPTIVE)
+  TestAssign       TestAssign[]
 }
 
 model TestAssign {

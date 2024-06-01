@@ -26,16 +26,17 @@ router.put('/questions/:questionId/:questionId/answers/:answerId', testsControll
 // router.delete('/questions/:questionId/:questionId/answers/:answerId', testsController.updateQuestion)
 // router.delete('/subjects/:id', testsController.getTest)
 
-router.post('/templates', testValidates.validateTemplate, testsController.createTestTemplate)
+// router.post('/templates', testValidates.validateTemplate, testsController.createTestTemplate)
+router.post('/templates', testsController.createTestTemplate)
 router.get('/templates', testsController.getTestTemplates)
-router.put('/templates/:id', testValidates.validateTemplate, testsController.updateTestTemplate)
+// router.put('/templates/:id', testValidates.validateTemplate, testsController.updateTestTemplate)
 
 router.post('/settings', testValidates.validateSettings, testsController.createTestSettings)
 router.get('/settings', testsController.getTestSettings)
 router.put('/settings/:id', testValidates.validateSettings, testsController.updateTestSettings)
 
 router.get('/assign/user', testsController.getUserTestAssign)
-router.post('/assign/:assign_id/nextQuestion/', testsController.getAssignQuestions)
+router.post('/assign/:assign_id/nextQuestion/', testsController.nextQuestion)
 
 router.post('/assign', testValidates.validateAssign, testsController.createTestAssign)
 router.get('/assign', testsController.getTestAssign)

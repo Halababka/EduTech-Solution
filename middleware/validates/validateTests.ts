@@ -389,4 +389,21 @@ export class TestValidates {
         }
         next()
     }
+
+    async validateNextQuestion(req: Request, res: Response, next: Function) {
+        const {ids, text_answer} = req.body;
+
+        if (ids) {
+            if (!(Array.isArray(ids) && ids.every(Number.isInteger))) {
+                return res.status(400).json({error: "ids должно быть массивом чисел"})
+            }
+        }
+
+        if (text_answer) {
+            if (typeof text_answer !== 'string') {
+                return res.status(400).json({error: "text_answer должен быть строкой"})
+            }
+        }
+        next()
+    }
 }

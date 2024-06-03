@@ -1,6 +1,6 @@
 import {client} from '../db.js';
 import dbErrorsHandler from "../utils/dbErrorsHandler.js";
-import {json, Request, Response} from 'express'
+import {Request, Response} from 'express'
 import {sendNotificationToUsers} from "../notificationSocket"
 
 import type {
@@ -120,7 +120,20 @@ function findClosestQuestion(questions, averageLevel) {
     return closestQuestion;
 }
 
-function collectQuestions(assign) {
+async function getBreadcrumb(subjectId) {
+    const breadcrumb = [];
+    let currentSubject: any = await client.subject.findUnique({where: {id: subjectId}, include: {parent: true}});
+
+    while (currentSubject) {
+        breadcrumb.unshift({label: currentSubject.name});
+        currentSubject = currentSubject.parent;
+    }
+
+    return breadcrumb;
+}
+
+
+async function collectQuestions(assign) {
     const result = [];
     let answerIdCounter = 1;
 
@@ -130,12 +143,17 @@ function collectQuestions(assign) {
             const questions = subjectsSettings[j].Subject.questions;
             for (let k = 0; k < questions.length; k++) {
                 const question = questions[k];
+
+                // Получение breadcrumbs для текущего вопроса
+                const breadcrumb = await getBreadcrumb(question.subjectId);
+
                 const transformedQuestion = {
                     id: question.id,
                     text: question.text,
                     type: question.type,
                     level: question.level,
                     subjectId: question.subjectId,
+                    breadcrumb: breadcrumb, // Добавление breadcrumbs
                     answers: question.answers ? question.answers.map(answer => ({
                         id: answerIdCounter++,
                         content: answer.content,
@@ -152,6 +170,7 @@ function collectQuestions(assign) {
 
     return result;
 }
+
 
 export class TestsController {
     async createAnswer(req: Request, res: Response) {
@@ -595,20 +614,20 @@ export class TestsController {
         }
         // TODO: Как привязывать новые и определять, что удаляешь старые
         let template: TestTemplate
-        try {
-            template = await client.testTemplate.update({
-                where: {
-                    id: id
-                },
-                data: newData,
-                include: {
-                    subjects: true
-                }
-            })
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
+        // try {
+        //     template = await client.testTemplate.update({
+        //         where: {
+        //             id: id
+        //         },
+        //         data: newData,
+        //         include: {
+        //             subjects: true
+        //         }
+        //     })
+        // } catch (e) {
+        //     res.status(500).json({error: dbErrorsHandler(e)})
+        //     return
+        // }
 
         return res.json(template)
     }
@@ -782,7 +801,7 @@ export class TestsController {
             return res.status(403).json({error: 'Данный тест уже завершён'})
         }
 
-        const questions = collectQuestions(assign)
+        const questions = await collectQuestions(assign)
 
         if (assign[0].questionId === null) {
             debug && console.log('Тест начинается. Подбираю первый вопрос')
@@ -972,7 +991,10 @@ export class TestsController {
                 // Подбираем следующий вопрос
                 const newQuestion = findClosestQuestion(questionSetBySubject, 8)
 
+
+                if (!isFinite(newLevel)) newLevel = 0
                 // Сохраняем в базу текущий вопрос
+
                 try {
                     await client.userAssign.update({
                         where: {

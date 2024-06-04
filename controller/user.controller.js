@@ -125,6 +125,7 @@ export class UserController {
                 }
 
                 const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+                userData.password = hashedPassword
 
                 // Проверяем наличие полей role и groups
                 if (userData.role) {

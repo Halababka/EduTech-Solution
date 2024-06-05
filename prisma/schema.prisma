@@ -203,6 +203,7 @@ model TestSettings {
   endTime          DateTime?
   duration         Int?
   attemptsCount    Int?
+  totalQuestions   Int?
   assessmentMethod AssessmentMethod @default(ADAPTIVE)
   TestAssign       TestAssign[]
 }
@@ -243,6 +244,7 @@ model UserQuestions {
   answerTime   DateTime              @default(now())
   level        Float
   answer       UserQuestionsAnswer[]
+  correct      Boolean               @default(false)
 }
 
 model UserQuestionsAnswer {

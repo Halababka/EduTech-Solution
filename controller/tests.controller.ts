@@ -105,14 +105,14 @@ function checkAnswerCorrect(selected, question) {
     }
 }
 
-function findClosestQuestion(questions, averageLevel) {
+function findQuestionByDifficulty(questions, currentDifficulty) {
     let closestQuestion = null;
-    let minDifference = Infinity;
+    let closestDifference = Infinity;
 
     questions.forEach(question => {
-        let difference = Math.abs(question.level - averageLevel);
-        if (difference < minDifference || (difference === minDifference && question.level > averageLevel)) {
-            minDifference = difference;
+        const difficultyDifference = Math.abs(question.level - currentDifficulty);
+        if (difficultyDifference < closestDifference) {
+            closestDifference = difficultyDifference;
             closestQuestion = question;
         }
     });
@@ -131,7 +131,6 @@ async function getBreadcrumb(subjectId) {
 
     return breadcrumb;
 }
-
 
 async function collectQuestions(assign) {
     const result = [];
@@ -764,26 +763,30 @@ export class TestsController {
             text_answer: text_answer
         }
 
-        const assign = await client.userAssign.findMany({
-            where: {
-                AND: [
-                    {userId: user_id},
-                    {assignId: assign_id}
-                ]
-            },
-            include: {
-                UserQuestions: true,
-                assign: {
-                    include: {
-                        testTemplate: {
-                            include: {
-                                subjectsSettings: {
-                                    include: {
-                                        Subject: {
-                                            include: {
-                                                questions: {
-                                                    include: {
-                                                        answers: true
+        let assign
+        try {
+            assign = await client.userAssign.findMany({
+                where: {
+                    AND: [
+                        {userId: user_id},
+                        {assignId: assign_id}
+                    ]
+                },
+                include: {
+                    UserQuestions: true,
+                    assign: {
+                        include: {
+                            testSettings: true,
+                            testTemplate: {
+                                include: {
+                                    subjectsSettings: {
+                                        include: {
+                                            Subject: {
+                                                include: {
+                                                    questions: {
+                                                        include: {
+                                                            answers: true
+                                                        }
                                                     }
                                                 }
                                             }
@@ -794,8 +797,11 @@ export class TestsController {
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
 
         if (assign[0].status === 'PASSED') {
             return res.status(403).json({error: 'Данный тест уже завершён'})
@@ -811,9 +817,10 @@ export class TestsController {
             const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
 
             const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+            debug && console.log('Стартовая сложность', initLevel)
 
             // Ищем ближайший вопрос к этой сложности
-            const currentQuestion = findClosestQuestion(questionsBySubject, initLevel)
+            const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
 
             // Сохраняем в базу текущий вопрос
             try {
@@ -866,7 +873,8 @@ export class TestsController {
                 debug && console.log('Текущая сложность', userQuestion.level)
                 debug && console.log('Коэффициент', coefficient)
                 // Если ответили верно, увеличить сложность, иначе уменьшить
-                if (checkAnswerCorrect(selected, currentQuestion)) {
+                const correctness = checkAnswerCorrect(selected, currentQuestion)
+                if (correctness) {
                     // Увеличиваем сложность
                     newLevel = userQuestion.level + coefficient
                     debug && console.log('Оцениваю: Увеличиваем сложность', newLevel)
@@ -886,9 +894,11 @@ export class TestsController {
                             id: userQuestion.id
                         },
                         data: {
+                            level: newLevel,
                             answer: {
                                 create: createAnswerObject(selected, currentQuestion)
-                            }
+                            },
+                            correct: correctness
                         }
                     })
                 } catch (e) {
@@ -911,6 +921,30 @@ export class TestsController {
 
                 // Фильтруем исходный массив вопросов
                 const filteredQuestionSet = questionSet.filter(q => !askedQuestionIds.includes(q.id));
+
+
+                // Если заданное количество вопросов было задано
+                const totalQuestions = assign[0].assign.testSettings.totalQuestions
+                debug && console.log(`Количество вопросов, которые необходимо было спросить: ${totalQuestions}, было задано ${askedQuestions.length}`)
+                if (totalQuestions !== null && askedQuestions.length >= totalQuestions) {
+                    debug && console.log(`Завершаю тест`)
+                    try {
+                        await client.userAssign.update({
+                            where: {
+                                id: assign[0].id
+                            },
+                            data: {
+                                status: 'PASSED',
+                                endTime: new Date()
+                            }
+                        })
+                    } catch (e) {
+                        res.status(500).json({error: dbErrorsHandler(e)})
+                        return
+                    }
+
+                    return res.json('Завершаем тестирование')
+                }
 
                 // Если вопросов нет, то переходим к следующей теме
                 if (filteredQuestionSet.length === 0) {
@@ -946,7 +980,7 @@ export class TestsController {
 
                     const initLevel = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
 
-                    const currentQuestion = findClosestQuestion(questionsBySubject, initLevel)
+                    const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
 
                     debug && console.log('Стартовая сложность новой темы: ', initLevel)
 
@@ -977,9 +1011,6 @@ export class TestsController {
                     return res.status(200).json(currentQuestion)
                 }
 
-                // TODO: ТУТ КАКОЙ-ТО ВОПРОС С ТЕМ ОТКУДА ОН БЕРЁТ НУЖНЫЕ ВОПРОСЫ ИМЕННО С ТЕМОЙ СВЯЗАННЫХ
-                // TODO: CURRENT QUESTION ВОЗМОЖНО НЕ ТОТ КОТОРЫЙ ИДЁТ, А ТОТ КОТОРЫЙ БУДЕТ ЗАДАН
-
                 debug && console.log('Подбираю следующий вопрос в той же теме')
 
                 // Берём доступный список вопросов
@@ -989,7 +1020,7 @@ export class TestsController {
                 const questionSetBySubject = lostQuestions.filter(question => question.subjectId === currentQuestion.subjectId)
 
                 // Подбираем следующий вопрос
-                const newQuestion = findClosestQuestion(questionSetBySubject, 8)
+                const newQuestion = findQuestionByDifficulty(questionSetBySubject, 8)
 
 
                 if (!isFinite(newLevel)) newLevel = 0

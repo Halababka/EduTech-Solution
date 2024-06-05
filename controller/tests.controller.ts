@@ -803,6 +803,10 @@ export class TestsController {
             return
         }
 
+        if (assign.length === 0) {
+            return res.status(404).json({error: 'Тест не найден'})
+        }
+
         if (assign[0].status === 'PASSED') {
             return res.status(403).json({error: 'Данный тест уже завершён'})
         }
@@ -894,7 +898,7 @@ export class TestsController {
                             id: userQuestion.id
                         },
                         data: {
-                            level: newLevel,
+                            level: parseFloat(newLevel.toFixed(2)),
                             answer: {
                                 create: createAnswerObject(selected, currentQuestion)
                             },
@@ -923,8 +927,9 @@ export class TestsController {
                 const filteredQuestionSet = questionSet.filter(q => !askedQuestionIds.includes(q.id));
 
 
-                // Если заданное количество вопросов было задано
-                const totalQuestions = assign[0].assign.testSettings.totalQuestions
+                // Если заданное количество вопросов в теме было задано
+                const totalQuestions = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === lastSubject).totalQuestions
+
                 debug && console.log(`Количество вопросов, которые необходимо было спросить: ${totalQuestions}, было задано ${askedQuestions.length}`)
                 if (totalQuestions !== null && askedQuestions.length >= totalQuestions) {
                     debug && console.log(`Завершаю тест`)
@@ -978,7 +983,7 @@ export class TestsController {
                     const firstSubject = lostQuestions[0].subjectId
                     const questionsBySubject = lostQuestions.filter(question => question.subjectId === firstSubject)
 
-                    const initLevel = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+                    const initLevel = (assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length).toFixed(2);
 
                     const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
 

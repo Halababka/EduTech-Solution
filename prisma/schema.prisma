@@ -191,6 +191,7 @@ model TestTemplateSubjects {
   subjectId         Int
   subjectName       String
   initialDifficulty Int?
+  totalQuestions    Int?
   threshold         Float
 }
 
@@ -203,7 +204,6 @@ model TestSettings {
   endTime          DateTime?
   duration         Int?
   attemptsCount    Int?
-  totalQuestions   Int?
   assessmentMethod AssessmentMethod @default(ADAPTIVE)
   TestAssign       TestAssign[]
 }

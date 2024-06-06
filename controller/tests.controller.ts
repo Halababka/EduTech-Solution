@@ -283,6 +283,7 @@ export class TestsController {
                 }
             }
         })
+
         res.json(questions);
     }
 
@@ -632,7 +633,7 @@ export class TestsController {
     }
 
     async createTestSettings(req: Request, res: Response) {
-        const {name, startTime, endTime, duration, attemptsCount, assessmentMethod, initialDifficulty} = req.body;
+        const {name, startTime, endTime, duration, attemptsCount, assessmentMethod} = req.body;
         const user_id = (req as any).user.id;
 
         let newData: any = {
@@ -645,10 +646,6 @@ export class TestsController {
 
         if (attemptsCount) {
             newData.attemptsCount = attemptsCount
-        }
-
-        if (initialDifficulty) {
-            newData.initialDifficulty = initialDifficulty
         }
 
         if (assessmentMethod) {
@@ -688,7 +685,14 @@ export class TestsController {
             return
         }
 
-        return res.json(settings)
+        return res.json(settings.map(obj => {
+            for (const key in obj) {
+                if (obj[key] === null) {
+                    obj[key] = '-';
+                }
+            }
+            return obj;
+        }))
     }
 
     async updateTestSettings(req: Request, res: Response) {
@@ -925,7 +929,6 @@ export class TestsController {
 
                 // Фильтруем исходный массив вопросов
                 const filteredQuestionSet = questionSet.filter(q => !askedQuestionIds.includes(q.id));
-
 
                 // Если заданное количество вопросов в теме было задано
                 const totalQuestions = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === lastSubject).totalQuestions

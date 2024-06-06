@@ -264,7 +264,6 @@ export class TestValidates {
             }
         }
 
-
         if (req.body.hasOwnProperty('name')) {
             if (typeof name !== 'string') {
                 return res.status(400).json({error: 'Название должно быть строкой'});
@@ -274,6 +273,7 @@ export class TestValidates {
             }
         }
         if (startTime) {
+            console.log(startTime)
             if (new Date(startTime).toString() === 'Invalid Date') {
                 return res.status(400).json({error: 'Время и дата начала содержит не корректный формат'});
             }

@@ -8,26 +8,28 @@ datasource db {
 }
 
 model User {
-  id               Int            @id @default(autoincrement())
+  id               Int                  @id @default(autoincrement())
   first_name       String
   middle_name      String?
   last_name        String
-  username         String         @unique
+  username         String               @unique
   password         String?
-  email            String?        @unique
-  lastLogin        DateTime?      @updatedAt
+  email            String?              @unique
+  lastLogin        DateTime?            @updatedAt
   avatar           String?
   about            String?
-  role             Roles          @relation(fields: [rolesId], references: [id])
+  role             Roles                @relation(fields: [rolesId], references: [id])
   materials        Materials[]
-  rolesId          Int            @default(1)
+  rolesId          Int                  @default(1)
   groups           Groups[]
-  enrolled_courses Courses[]      @relation("EnrolledCourses")
-  courses_owned    Courses[]      @relation("CoursesOwners")
+  enrolled_courses Courses[]            @relation("EnrolledCourses")
+  courses_owned    Courses[]            @relation("CoursesOwners")
   TestTemplate     TestTemplate[]
   TestSettings     TestSettings[]
   assignUsers      UserAssign[]
   TestAssign       TestAssign[]
+  answers_tasks    StudentAssignments[] @relation("Student")
+  checking_task    StudentAssignments[] @relation("Reviewer")
 }
 
 model Roles {
@@ -77,8 +79,8 @@ model Courses {
   materials         Materials[]
   created_at        DateTime     @default(now())
   updated_at        DateTime     @updatedAt
-  starts_at         DateTime     @default(now()) @db.Date
-  ends_at           DateTime?    @db.Date
+  starts_at         DateTime     @default(now())
+  ends_at           DateTime?
   categories        Categories[]
   duration_hours    Int? // Количество часов
   course_owners     User[]       @relation("CoursesOwners")
@@ -89,7 +91,7 @@ model Sections {
   id              Int               @id @default(autoincrement())
   name            String
   description     String?
-  unlocks_at      DateTime
+  unlocks_at      DateTime          @default(now())
   materials       Materials[]
   parent          Sections?         @relation("parentId", fields: [parentId], references: [id])
   subsections     Sections[]        @relation("parentId")
@@ -104,25 +106,68 @@ model SectionContents {
   title      String?
   content    String?
   materials  Materials[]
-  sectioins  Sections    @relation(fields: [sectionsId], references: [id])
+  urlItem    String?
+  urlVideo   String?
+  folders    Folders[]
+  tasks      Tasks[]
+  sections   Sections    @relation(fields: [sectionsId], references: [id])
   sectionsId Int
 }
 
+model Tasks {
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  description        String?
+  text               String?
+  materials          Materials[]
+  SectionContents    SectionContents?     @relation(fields: [sectionContentsId], references: [id])
+  sectionContentsId  Int?
+  StudentAssignments StudentAssignments[]
+}
+
+model StudentAssignments {
+  id         Int         @id @default(autoincrement())
+  task       Tasks       @relation(fields: [tasksId], references: [id])
+  student    User        @relation("Student", fields: [userId], references: [id])
+  materials  Materials[]
+  submitted  DateTime    @default(now())
+  grade      Int? // Оценка ответа
+  reviewer   User?       @relation("Reviewer", fields: [reviewerId], references: [id]) // Проверяющий пользователь
+  reviewerId Int?
+  tasksId    Int
+  userId     Int
+}
+
+model Folders {
+  id                Int              @id @default(autoincrement())
+  name              String
+  parent            Folders?         @relation("FolderTree", fields: [parentId], references: [id])
+  parentId          Int?
+  children          Folders[]        @relation("FolderTree")
+  materials         Materials[]
+  SectionContents   SectionContents? @relation(fields: [sectionContentsId], references: [id])
+  sectionContentsId Int?
+}
+
 model Materials {
-  id               Int               @id @default(autoincrement())
-  name             String
-  description      String?
-  mime_type        String?
-  key              String
-  path             String
-  owner            User              @relation(fields: [userId], references: [id])
-  size             Int?
-  created_at       DateTime          @default(now())
-  updated_at       DateTime          @updatedAt
-  sections         Sections[]
-  courses          Courses[]
-  userId           Int
-  section_contents SectionContents[]
+  id                   Int                 @id @default(autoincrement())
+  name                 String
+  description          String?
+  mime_type            String?
+  key                  String
+  path                 String
+  owner                User                @relation(fields: [userId], references: [id])
+  size                 Int?
+  created_at           DateTime            @default(now())
+  updated_at           DateTime            @updatedAt
+  sections             Sections[]
+  courses              Courses[]
+  userId               Int
+  section_contents     SectionContents[]
+  Folder               Folders[]
+  tasks                Tasks[]
+  StudentAssignments   StudentAssignments? @relation(fields: [studentAssignmentsId], references: [id])
+  studentAssignmentsId Int?
 }
 
 model RegistrationLinks {
@@ -191,7 +236,6 @@ model TestTemplateSubjects {
   subjectId         Int
   subjectName       String
   initialDifficulty Int?
-  totalQuestions    Int?
   threshold         Float
 }
 
@@ -244,7 +288,6 @@ model UserQuestions {
   answerTime   DateTime              @default(now())
   level        Float
   answer       UserQuestionsAnswer[]
-  correct      Boolean               @default(false)
 }
 
 model UserQuestionsAnswer {

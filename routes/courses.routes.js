@@ -11,5 +11,5 @@ router.post("/", coursesController.createCourse);
 router.get("/:id", coursesController.getCourse);
 router.delete("/:id", coursesController.deleteCourse);
 router.delete("/", coursesController.deleteCourses);
-
+router.put('/:id', coursesController.updateCourse);
 export default router;

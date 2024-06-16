@@ -53,7 +53,13 @@ export class UserController {
         try {
             const user = await client.user.findUnique({
                 where: {id: parseInt(userId)},
-                include: {enrolled_courses: true}
+                include: {
+                    enrolled_courses: {
+                        include: {
+                            categories: true
+                        }
+                    }
+                }
             });
             if (!user) {
                 return res.status(404).json({error: "User not found"});
@@ -125,17 +131,17 @@ export class UserController {
                 }
 
                 const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-                userData.password = hashedPassword
+                userData.password = hashedPassword;
 
                 // Проверяем наличие полей role и groups
                 if (userData.role) {
                     userData.role = {
-                        connect: { id: userData.role.id }
+                        connect: {id: userData.role.id}
                     };
                 }
                 if (userData.groups) {
                     userData.groups = {
-                        connect: userData.groups.map(group => ({ id: group.id }))
+                        connect: userData.groups.map(group => ({id: group.id}))
                     };
                 }
 
@@ -168,7 +174,7 @@ export class UserController {
 
             // Проверяем, что данные отличаются от существующих данных в базе
             const existingUser = await client.user.findUnique({
-                where: { id: userId }
+                where: {id: userId}
             });
 
             const updatedFields = {};
@@ -179,11 +185,11 @@ export class UserController {
             }
 
             if (Object.keys(updatedFields).length === 0) {
-                return res.status(400).json({ error: "No fields to update" });
+                return res.status(400).json({error: "No fields to update"});
             }
 
             // Проверяем наличие и непустоту поля пароля
-            if (userData.password !== undefined && userData.password !== '') {
+            if (userData.password !== undefined && userData.password !== "") {
                 // Хэшируем пароль
                 const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
                 // Обновляем поле пароля в данных для обновления
@@ -192,20 +198,20 @@ export class UserController {
                 // Если поле пароля пустое, удаляем его из данных для обновления
                 delete updatedFields.password;
             }
-            console.log(userData.groups)
+            console.log(userData.groups);
 
             // Формируем данные для обновления пользователя
             const userDataToUpdate = {
                 ...updatedFields,
                 // Используем connect для связи с существующей ролью по идентификатору
-                ...(userData.role && { role: { connect: { id: userData.role.id } }}),
+                ...(userData.role && {role: {connect: {id: userData.role.id}}}),
                 // Используем set для обновления групп пользователя
-                ...(userData.groups && { groups: { set: userData.groups }}),
+                ...(userData.groups && {groups: {set: userData.groups}})
             };
 
             // Обновляем информацию о пользователе в базе данных
             const updatedUser = await client.user.update({
-                where: { id: userId },
+                where: {id: userId},
                 data: userDataToUpdate
             });
 
@@ -214,7 +220,7 @@ export class UserController {
         } catch (error) {
             // Обрабатываем ошибку и возвращаем ее клиенту
             console.error("Error updating user:", error);
-            res.status(500).json({ error: "Failed to update user" });
+            res.status(500).json({error: "Failed to update user"});
         }
     }
 
@@ -299,39 +305,39 @@ export class UserController {
 
     async resetPassword(req, res) {
         try {
-            const userId = parseInt(req.user.id)
-            const { currentPassword, newPassword } = req.body;
+            const userId = parseInt(req.user.id);
+            const {currentPassword, newPassword} = req.body;
 
             if (!currentPassword || !newPassword) {
-                return res.status(400).json({ error: "Current and new passwords cannot be empty" });
+                return res.status(400).json({error: "Current and new passwords cannot be empty"});
             }
 
             const user = await client.user.findUnique({
-                where: { id: userId },
+                where: {id: userId},
                 select: {password: true}
             });
 
             if (!user) {
-                return res.status(404).json({ error: "User not found" });
+                return res.status(404).json({error: "User not found"});
             }
 
             const passwordMatch = await bcrypt.compare(currentPassword, user.password);
 
             if (!passwordMatch) {
-                return res.status(401).json({ error: "Current password is incorrect" });
+                return res.status(401).json({error: "Current password is incorrect"});
             }
 
             const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
             await client.user.update({
-                where: { id: userId },
-                data: { password: hashedNewPassword },
+                where: {id: userId},
+                data: {password: hashedNewPassword}
             });
 
-            res.json({ message: "Password successfully updated" });
+            res.json({message: "Password successfully updated"});
         } catch (error) {
             console.error("Error resetting password:", error);
-            res.status(500).json({ error: "Internal server error" });
+            res.status(500).json({error: "Internal server error"});
         }
     }
 }

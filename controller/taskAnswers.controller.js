@@ -16,6 +16,30 @@ export class AnswerController {
             res.status(500).json({ error: 'Internal server error' });
         }
     }
+
+    async getAnswersByTaskId(req, res) {
+        try {
+            const taskId = parseInt(req.params.taskId);
+
+            const answers = await client.studentAssignments.findMany({
+                where: {
+                    tasksId: taskId,
+                },
+                include: {
+                    student: true,
+                    task: true,
+                    materials: true,
+                    reviewer: true,
+                },
+            });
+
+            res.json(answers);
+        } catch (error) {
+            console.error('Error fetching answers by task ID:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
     async createAnswer(req, res) {
         try {
             const { taskId, materials } = req.body;

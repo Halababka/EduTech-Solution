@@ -123,6 +123,30 @@ async function main() {
         }
     });
 
+    const permission5_1 = await prisma.permissions.create({
+        data: {
+            code: 'CRUD_CATEGORIES',
+            name: 'Круд категорий',
+            roles: {
+                connect: [
+                    { id: roleAdmin.id }
+                ]
+            }
+        }
+    });
+
+    const permission6_1 = await prisma.permissions.create({
+        data: {
+            code: 'CRUD_LINKS',
+            name: 'Круд ссылок',
+            roles: {
+                connect: [
+                    { id: roleAdmin.id }
+                ]
+            }
+        }
+    });
+
     console.log("🌾 Finish seeding...");
 }
 

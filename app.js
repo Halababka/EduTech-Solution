@@ -31,4 +31,5 @@ app.use('/api/roles', rolesRoutes);
 app.use('/api/registration', registrationRoutes)
 app.use('/api/permissions', permissionsRoutes)
 app.use('/api/tasks', tasksRoutes)
+
 app.listen(PORT, () => console.log(`Server has been started on port ${PORT}`));

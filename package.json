@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx app.js",
-    "dev": "tsx --watch app.js"
+    "dev": "tsx --watch app.js",
+    "up": "npm install && npx prisma migrate dev"
   },
   "keywords": [],
   "author": "",

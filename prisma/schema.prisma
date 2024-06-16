@@ -130,8 +130,8 @@ model StudentAssignments {
   task       Tasks       @relation(fields: [tasksId], references: [id])
   student    User        @relation("Student", fields: [userId], references: [id])
   materials  Materials[]
-  submitted  DateTime    @default(now())
-  grade      Int? // Оценка ответа
+  submitted  DateTime    @default(now()) @updatedAt
+  grade      Int?
   reviewer   User?       @relation("Reviewer", fields: [reviewerId], references: [id]) // Проверяющий пользователь
   reviewerId Int?
   tasksId    Int

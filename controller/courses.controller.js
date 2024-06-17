@@ -75,7 +75,9 @@ export class CoursesController {
                     enrolled_students: {
                         include: {groups: true}
                     },
-                    course_owners: true,
+                    course_owners: {
+                        include: {groups: true}
+                    },
                     categories: true
                 }
             });
@@ -84,6 +86,10 @@ export class CoursesController {
             course.enrolled_students = course.enrolled_students.map(student => ({
                 ...student,
                 fullname: `${student.last_name} ${student.first_name} ${student.middle_name || ""}`.trim()
+            }));
+            course.course_owners = course.course_owners.map(owner => ({
+                ...owner,
+                fullname: `${owner.last_name} ${owner.first_name} ${owner.middle_name || ""}`.trim()
             }));
 
             res.json(course);

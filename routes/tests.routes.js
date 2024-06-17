@@ -30,6 +30,8 @@ router.put('/questions/:questionId/:questionId/answers/:answerId', testsControll
 router.post('/templates', testsController.createTestTemplate)
 router.get('/templates', testsController.getTestTemplates)
 // router.put('/templates/:id', testValidates.validateTemplate, testsController.updateTestTemplate)
+router.put('/templates/:id', testsController.updateTestTemplate)
+router.delete('/templates/:id', testsController.deleteTestTemplate)
 
 router.post('/settings', testValidates.validateSettings, testsController.createTestSettings)
 router.get('/settings', testsController.getTestSettings)

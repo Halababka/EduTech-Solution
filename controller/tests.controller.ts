@@ -542,9 +542,20 @@ export class TestsController {
 
         const subjectNames = await client.subject.findMany({})
 
+        // Создаем словарь для быстрого поиска имени темы по id
+        const themeMap = subjectNames.reduce((map, theme) => {
+            map[theme.id] = theme.name;
+            return map;
+        }, {});
+
+        // Обновляем массив newSubjects, добавляя поле subjectName
         const newSubjects = subjects.map(subject => {
-            const matchingSubjectName = subjectNames.find(name => name.id === subject.subjectId);
-            return {...subject, subjectName: matchingSubjectName?.name};
+            const {name, ...rest} = subject;
+            return {
+                ...rest,
+                subjectId: subject.subjectId,
+                subjectName: themeMap[subject.subjectId] || 'Неизвестная тема'
+            };
         });
 
         if (subjects) {
@@ -562,7 +573,10 @@ export class TestsController {
         let template: TestTemplate
         try {
             template = await client.testTemplate.create({
-                data: newData
+                data: newData,
+                include: {
+                    subjectsSettings: true
+                }
             })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
@@ -603,33 +617,144 @@ export class TestsController {
             return res.status(400).json({error: 'Нет данных для обновления'})
         }
 
-        if (subjects) {
-            try {
-                newData.subjects = {
-                    connect: [...subjects.map((num: number) => ({id: num}))]
-                }
-            } catch (e) {
-                return res.status(400).json({error: 'Невозможно распарсить массив'});
-            }
-        }
-        // TODO: Как привязывать новые и определять, что удаляешь старые
         let template: TestTemplate
-        // try {
-        //     template = await client.testTemplate.update({
-        //         where: {
-        //             id: id
-        //         },
-        //         data: newData,
-        //         include: {
-        //             subjects: true
-        //         }
-        //     })
-        // } catch (e) {
-        //     res.status(500).json({error: dbErrorsHandler(e)})
-        //     return
-        // }
+        try {
+            template = await client.testTemplate.findUnique({
+                where: {
+                    id: id
+                },
+                include: {
+                    subjectsSettings: true
+                }
+            })
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
 
-        return res.json(template)
+        let subjectsList: subject[]
+        try {
+            subjectsList = await client.subject.findMany()
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+        let queries = [];
+
+        if (subjects) {
+
+            // Массивы для разделения
+            let newRecords = [];
+            let updatedRecords = [];
+            let deletedRecords = [];
+
+            // Индексировать существующие записи по subjectId для удобства
+            let existingSubjectsMap = {};
+            template.subjectsSettings.forEach(subject => {
+                existingSubjectsMap[subject.subjectId] = subject;
+            });
+
+            // Найти новые и обновленные записи
+            subjects.forEach(subject => {
+                const existingSubject = existingSubjectsMap[subject.subjectId];
+                if (existingSubject) {
+                    // Проверка на изменения данных
+                    if (existingSubject.initialDifficulty !== subject.initialDifficulty ||
+                        existingSubject.totalQuestions !== subject.totalQuestions ||
+                        existingSubject.threshold !== subject.threshold) {
+                        updatedRecords.push(subject);
+                    }
+                    // Удаляем найденные записи из existingSubjectsMap
+                    delete existingSubjectsMap[subject.subjectId];
+                } else {
+                    // Новые записи
+                    newRecords.push(subject);
+                }
+            });
+
+            // Оставшиеся записи в existingSubjectsMap являются удаленными
+            deletedRecords = Object.values(existingSubjectsMap).map(subject => subject.subjectId);
+
+            deletedRecords.length !== 0 && (function deleteQuery() {
+                queries.push(client.testTemplateSubjects.deleteMany({
+                    where: {
+                        subjectId: {
+                            in: deletedRecords,
+                        },
+                        testTemplateId: id,
+                    },
+                }))
+            })();
+
+            newRecords.length !== 0 && (function insertQuery() {
+                const newSubjectList = newRecords.map(newRecords => {
+                    const subjectInfo = subjectsList.find(sub => sub.id === newRecords.subjectId);
+                    return {
+                        ...newRecords,
+                        testTemplateId: id,
+                        subjectName: subjectInfo ? subjectInfo.name : 'Unknown'
+                    };
+                });
+                queries.push(client.testTemplateSubjects.createMany({data: newSubjectList}))
+            })();
+
+            updatedRecords.length !== 0 && (function updateQuery() {
+                for (const update of updatedRecords) {
+                    queries.push(client.testTemplateSubjects.updateMany({
+                        where: {
+                            subjectId: update.subjectId,
+                            testTemplateId: id,
+                        },
+                        data: {
+                            initialDifficulty: update.initialDifficulty,
+                            totalQuestions: update.totalQuestions,
+                            threshold: update.threshold,
+                        },
+                    }))
+                }
+            })();
+        }
+
+        let updateTemplateName = client.testTemplate.update({
+            where: {id: id},
+            data: newData,
+            include: {
+                subjectsSettings: true
+            }
+        });
+
+        if (newData.length !== 0) {
+            queries.push(updateTemplateName); // Spread the array here
+        }
+
+        let updatedTemplate;
+        try {
+            updatedTemplate = await client.$transaction(queries);
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)});
+        }
+        return res.json(updatedTemplate[updatedTemplate.length - 1]);
+    }
+
+    async deleteTestTemplate(req: Request, res: Response) {
+        const id = parseInt(req.params.id);
+        try {
+            await client.$transaction([
+                client.testTemplateSubjects.deleteMany({
+                    where: {
+                        testTemplateId: id
+                    }
+                }),
+                client.testTemplate.deleteMany({
+                    where: {
+                        id: id
+                    }
+                })
+            ]);
+        } catch (e) {
+            return res.status(500).json({error: dbErrorsHandler(e)});
+        }
+        return res.json({status: 'Ok'});
     }
 
     async createTestSettings(req: Request, res: Response) {

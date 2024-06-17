@@ -190,8 +190,6 @@ model Subject {
   questions            Question[]
   parent               Subject?               @relation("ParentChild", fields: [parentId], references: [id])
   parentId             Int?
-  // TestTemplate   TestTemplate? @relation(fields: [testTemplateId], references: [id])
-  // testTemplateId Int?
   children             Subject[]              @relation("ParentChild")
   TestTemplateSubjects TestTemplateSubjects[]
 }
@@ -236,7 +234,8 @@ model TestTemplateSubjects {
   subjectId         Int
   subjectName       String
   initialDifficulty Int?
-  threshold         Float
+  totalQuestions    Int?
+  threshold         Float?
 }
 
 model TestSettings {

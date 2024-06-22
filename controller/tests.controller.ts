@@ -804,7 +804,11 @@ export class TestsController {
 
         let settings: TestSettings[]
         try {
-            settings = await client.testSettings.findMany({})
+            settings = await client.testSettings.findMany({
+                orderBy: {
+                    id: 'desc'
+                }
+            })
         } catch (e) {
             res.status(500).json({error: dbErrorsHandler(e)})
             return
@@ -871,6 +875,9 @@ export class TestsController {
                 },
                 include: {
                     assign: true
+                },
+                orderBy: {
+                    id: 'desc'
                 }
             })
         } catch (e) {

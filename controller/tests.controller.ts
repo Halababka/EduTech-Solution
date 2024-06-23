@@ -1387,6 +1387,13 @@ export class TestsController {
             return
         }
 
+        let attemptsCount = assign[0].assign.testSettings.attemptsCount;
+        let attempts = assign[0].attempts;
+
+        if (attemptsCount >= attempts) {
+            return res.status(403).json({error: 'Нет доступных попыток'});
+        }
+
         if (assign.length === 0) {
             return res.status(404).json({error: 'Тест не найден'})
         }
@@ -1557,7 +1564,7 @@ export class TestsController {
                     // Вопросы в теме закончились, берём следующую
                     if (newQuestion === null) {
                         if (unansweredQuestions.length === 0) {
-                        //     Завершаем тест, так как вопросов нет
+                            //     Завершаем тест, так как вопросов нет
                             debug && console.log(`Завершаю тест`)
                             try {
                                 await client.userAssign.update({
@@ -1565,6 +1572,7 @@ export class TestsController {
                                         id: assign[0].id
                                     },
                                     data: {
+                                        attempts: assign[0].attempts + 1,
                                         status: 'PASSED',
                                         endTime: new Date()
                                     }
@@ -1650,6 +1658,7 @@ export class TestsController {
                                 id: assign[0].id
                             },
                             data: {
+                                attempts: assign[0].attempts + 1,
                                 status: 'PASSED',
                                 endTime: new Date()
                             }

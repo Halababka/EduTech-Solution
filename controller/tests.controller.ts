@@ -895,9 +895,11 @@ export class TestsController {
             const endTime = assign.assign.testSettings.endTime
             const now = new Date()
 
-            if (now < startTime) {
+            if (startTime && now < startTime) {
                 assign.status = 'NOT STARTED'
-            } else if (now > endTime) {
+            }
+
+            if (endTime && now > endTime) {
                 assign.status = 'COMPLETED'
             }
         })
@@ -1399,16 +1401,16 @@ export class TestsController {
         const endTime = assign[0].assign.testSettings.endTime
         const now = new Date()
 
-        if (now < startTime) {
+        if (startTime && now < startTime) {
             return res.status(403).json({error: 'Тест ещё не открыт'})
-        } else if (now > endTime) {
+        }
+        if (endTime && now > endTime) {
             return res.status(403).json({error: 'Тест уже закончился'})
         }
 
         if (assign[0].questionId === null) {
             debug && console.log('Тест начинается. Подбираю первый вопрос')
             // Выбираем первый вопрос
-            // Средняя сложность среди всех вопросов всех тем
             const firstSubject = questions[0].subjectId
             const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
 
@@ -1547,6 +1549,99 @@ export class TestsController {
                     }
                 });
 
+                if (totalSubjectQuestions === 0) {
+                    debug && console.log('Тема без количества, задаём вопросы пока не закончатся')
+
+                    const newQuestion = findQuestionByDifficulty(unansweredQuestions.filter(item => item.subjectId === lastSubject), newLevel)
+
+                    // Вопросы в теме закончились, берём следующую
+                    if (newQuestion === null) {
+                        if (unansweredQuestions.length === 0) {
+                        //     Завершаем тест, так как вопросов нет
+                            debug && console.log(`Завершаю тест`)
+                            try {
+                                await client.userAssign.update({
+                                    where: {
+                                        id: assign[0].id
+                                    },
+                                    data: {
+                                        status: 'PASSED',
+                                        endTime: new Date()
+                                    }
+                                })
+                            } catch (e) {
+                                res.status(500).json({error: dbErrorsHandler(e)})
+                                return
+                            }
+
+                            return res.status(204).json('Завершаем тестирование')
+
+                        }
+
+                        // Выбираем первый вопрос в след. теме
+                        const firstSubject = unansweredQuestions[0].subjectId
+                        const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
+
+                        const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+                        debug && console.log('Стартовая сложность', initLevel)
+
+                        // Ищем ближайший вопрос к этой сложности
+                        const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
+
+                        // Сохраняем в базу текущий вопрос
+                        try {
+                            await client.userAssign.update({
+                                where: {
+                                    id: assign[0].id
+                                },
+                                data: {
+                                    startTime: new Date(),
+                                    questionId: currentQuestion.id,
+                                    UserQuestions: {
+                                        create: [
+                                            {
+                                                question: {
+                                                    connect: {id: currentQuestion.id}
+                                                },
+                                                level: initLevel
+                                            }
+                                        ]
+                                    }
+                                }
+                            })
+                        } catch (e) {
+                            res.status(500).json({error: dbErrorsHandler(e)})
+                            return
+                        }
+                        return res.status(200).json(currentQuestion)
+                    }
+
+                    try {
+                        await client.userAssign.update({
+                            where: {
+                                id: assign[0].id
+                            },
+                            data: {
+                                questionId: newQuestion.id,
+                                UserQuestions: {
+                                    create: [
+                                        {
+                                            question: {
+                                                connect: {id: newQuestion.id}
+                                            },
+                                            level: newLevel
+                                        }
+                                    ]
+                                }
+                            }
+                        })
+                    } catch (e) {
+                        res.status(500).json({error: dbErrorsHandler(e)})
+                        return
+                    }
+                    return res.status(200).json(newQuestion)
+                }
+
                 if (filteredQuestions.length === 0) {
                     debug && console.log(`Завершаю тест`)
                     try {
@@ -1597,6 +1692,7 @@ export class TestsController {
                     }
                     return res.status(200).json(newQuestion)
                 }
+
 
                 debug && console.log('Подбираю следующий вопрос в той же теме')
 

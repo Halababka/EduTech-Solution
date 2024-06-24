@@ -4,7 +4,7 @@ export const notificationSocket = setupNotificationSocket();
 
 // Функция для установки соединения с сервером уведомлений
 export function setupNotificationSocket() {
-    const socket = io('http://localhost:8181'); // Укажите адрес вашего сервера
+    const socket = io(process.env.DATABASE_URL); // Укажите адрес вашего сервера
 
     socket.on('connect', () => {
         console.log('Connected to notification server');

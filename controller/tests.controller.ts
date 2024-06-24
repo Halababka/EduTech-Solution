@@ -39,6 +39,21 @@ function now() {
     });
 }
 
+function isTestFinished(startDate, durationInMinutes) {
+    // Преобразуем длительность теста в миллисекунды
+    const durationInMilliseconds = durationInMinutes * 60 * 1000;
+
+    // Дата окончания теста
+    const endDate = new Date(startDate.getTime() + durationInMilliseconds);
+
+    // Текущая дата и время
+    const currentDate = new Date();
+
+    // Сравниваем текущую дату и время с датой окончания теста
+    return currentDate >= endDate;
+}
+
+
 // async function fetchSubjectsWithChildren(subjectId) {
 //     const subject = await client.subject.findUnique({
 //         where: {id: subjectId},
@@ -153,6 +168,8 @@ async function collectQuestions(assign) {
                     type: question.type,
                     level: question.level,
                     subjectId: question.subjectId,
+                    startTime: assign[i].startTime || new Date(), // Получение startTime из текущего элемента массива
+                    duration: assign[i].assign.testSettings.duration, // Получение startTime из текущего элемента массива
                     breadcrumb: breadcrumb, // Добавление breadcrumbs
                     answers: question.answers ? question.answers.map(answer => ({
                         id: answerIdCounter++,
@@ -698,6 +715,40 @@ export class TestsController {
             return
         }
 
+        let questions: Question[]
+        try {
+            questions = await client.question.findMany({})
+        } catch (e) {
+            res.status(500).json({error: dbErrorsHandler(e)})
+            return
+        }
+
+        let newTemplates;
+
+        // Функция для подсчета общего количества вопросов в теме и определения минимальной и максимальной сложности
+        const calculateSubjectStats = (subjectId) => {
+            const filteredQuestions = questions.filter(question => question.subjectId === subjectId);
+            const totalQuestions = filteredQuestions.length;
+            const minDifficulty = Math.min(...filteredQuestions.map(question => question.level));
+            const maxDifficulty = Math.max(...filteredQuestions.map(question => question.level));
+
+            return {
+                totalQuestions,
+                minDifficulty,
+                maxDifficulty
+            };
+        };
+
+        // Обновляем массив templates
+        templates.forEach(template => {
+            template.subjectsSettings.forEach(subject => {
+                const stats = calculateSubjectStats(subject.subjectId);
+                subject.total = stats.totalQuestions;
+                subject.minDifficulty = stats.minDifficulty;
+                subject.maxDifficulty = stats.maxDifficulty;
+            });
+        });
+
         return res.json(templates)
     }
 
@@ -1193,6 +1244,30 @@ export class TestsController {
         }
 
         let attemptsCount = assign[0].assign.testSettings.attemptsCount;
+        let duration = assign[0].assign.testSettings.duration;
+
+        if (duration !== null) {
+            if (isTestFinished(assign[0].startTime || new Date(), duration)) {
+                debug && console.log(`Завершаю тест т.к. истекло время`)
+                try {
+                    await client.userAssign.update({
+                        where: {
+                            id: assign[0].id
+                        },
+                        data: {
+                            attempts: assign[0].attempts + 1,
+                            status: 'PASSED',
+                            endTime: new Date()
+                        }
+                    })
+                } catch (e) {
+                    res.status(500).json({error: dbErrorsHandler(e)})
+                    return
+                }
+                return res.status(204).json('Завершаем тестирование')
+            }
+        }
+
         let attempts = assign[0].attempts;
 
         if (attemptsCount !== null && attemptsCount <= attempts) {
@@ -1285,7 +1360,7 @@ export class TestsController {
                 const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
 
                 // Рассчитываем коэффициент вопроса
-                const coefficient = 1/userQuestion.question.level
+                const coefficient = 1 / userQuestion.question.level
 
                 let newLevel;
 

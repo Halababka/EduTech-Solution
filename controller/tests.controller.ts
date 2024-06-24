@@ -1285,7 +1285,7 @@ export class TestsController {
                 const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
 
                 // Рассчитываем коэффициент вопроса
-                const coefficient = userQuestion.level > 0 ? 1 / userQuestion.level : 0
+                const coefficient = 1/userQuestion.question.level
 
                 let newLevel;
 
@@ -1371,6 +1371,7 @@ export class TestsController {
                     }
                 });
 
+                // Тема без заданного количества
                 if (totalSubjectQuestions === 0) {
                     debug && console.log('Тема без количества, задаём вопросы пока не закончатся')
 
@@ -1465,6 +1466,7 @@ export class TestsController {
                     return res.status(200).json(newQuestion)
                 }
 
+                // Вопросов больше не осталось
                 if (filteredQuestions.length === 0) {
                     debug && console.log(`Завершаю тест`)
                     try {
@@ -1489,9 +1491,7 @@ export class TestsController {
                 const totalCountQuestions = assign[0].assign.testTemplate.subjectsSettings.reduce((sum, item) => sum + item.totalQuestions, 0)
                 const countAskedQuestions = assign[0].UserQuestions.length
 
-                console.log(totalCountQuestions)
-                return
-
+                // Нужное количество вопросов задано
                 if (countAskedQuestions >= totalCountQuestions) {
                     debug && console.log(`Завершаю тест, так как нужное количество вопросов задано`)
                     try {
@@ -1513,7 +1513,6 @@ export class TestsController {
                     return res.status(204).json('Завершаем тестирование')
                 }
 
-                return
                 if (askedQuestions.length >= totalSubjectQuestions) {
                     debug && console.log('Подбираю новый вопрос в следующей же теме')
                     const newQuestion = findQuestionByDifficulty(filteredQuestions, newLevel)
@@ -1553,7 +1552,6 @@ export class TestsController {
                     }
                     return res.status(200).json(newQuestion)
                 }
-
 
                 debug && console.log('Подбираю следующий вопрос в той же теме')
 

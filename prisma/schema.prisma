@@ -204,6 +204,7 @@ model Question {
   subjectId     Int?
   UserAssign    UserAssign[]
   UserQuestions UserQuestions[]
+  hidden        Boolean         @default(false)
 }
 
 model Answer {
@@ -271,6 +272,7 @@ model UserAssign {
   assign          TestAssign      @relation(fields: [assignId], references: [id])
   assignId        Int
   status          AssignStatus    @default(NOT_PASSED)
+  attempts        Int             @default(0)
   startTime       DateTime?
   endTime         DateTime?
   currentQuestion Question?       @relation(fields: [questionId], references: [id])

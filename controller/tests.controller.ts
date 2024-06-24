@@ -4,13 +4,14 @@ import {Request, Response} from 'express'
 import {sendNotificationToUsers} from "../notificationSocket"
 
 import type {
-    Subject,
-    Question,
-    QuestionTypes,
     Answer,
     AnswerTypes,
-    TestTemplate,
-    TestSettings, TestAssign
+    Question,
+    QuestionTypes,
+    Subject,
+    TestAssign,
+    TestSettings,
+    TestTemplate
 } from '@prisma/client'
 
 const debug = true
@@ -38,25 +39,25 @@ function now() {
     });
 }
 
-async function fetchSubjectsWithChildren(subjectId) {
-    const subject = await client.subject.findUnique({
-        where: {id: subjectId},
-        include: {
-            questions: {
-                include: {
-                    answers: true
-                }
-            },
-            children: true
-        }
-    });
-    if (subject.children.length > 0) {
-        subject.children = await Promise.all(
-            subject.children.map(child => fetchSubjectsWithChildren(child.id))
-        );
-    }
-    return subject;
-}
+// async function fetchSubjectsWithChildren(subjectId) {
+//     const subject = await client.subject.findUnique({
+//         where: {id: subjectId},
+//         include: {
+//             questions: {
+//                 include: {
+//                     answers: true
+//                 }
+//             },
+//             children: true
+//         }
+//     });
+//     if (subject.children.length > 0) {
+//         subject.children = await Promise.all(
+//             subject.children.map(child => fetchSubjectsWithChildren(child.id))
+//         );
+//     }
+//     return subject;
+// }
 
 function createAnswerObject(selected, question) {
     if (question.type !== 'TEXT_ANSWER') {
@@ -274,6 +275,12 @@ export class TestsController {
 
     async getQuestion(req: Request, res: Response) {
         const questions: Question[] = await client.question.findMany({
+            where: {
+                hidden: false
+            },
+            orderBy: {
+                id: 'desc'
+            },
             include: {
                 subjects: true,
                 answers: {
@@ -283,8 +290,83 @@ export class TestsController {
                 }
             }
         })
+        const userQuestions: Question[] = await client.userQuestions.findMany({
+            include: {
+                userAssign: true
+            }
+        })
 
-        res.json(questions);
+        const STANDARD_DISCRIMINATION_INDEX = 0.2; // стандартный параметр дискриминативности
+
+        function calculateDiscriminationIndex(userQuestions, questions) {
+            // Группируем ответы пользователей по идентификатору вопроса
+            const groupedAnswers = userQuestions.reduce((acc, curr) => {
+                if (!acc[curr.questionId]) {
+                    acc[curr.questionId] = [];
+                }
+                acc[curr.questionId].push(curr);
+                return acc;
+            }, {});
+
+            // Функция для расчета дискриминации и определения комментария
+            function getDiscriminationIndexAndComment(answers) {
+                if (answers.length < 10) {
+                    return { index: STANDARD_DISCRIMINATION_INDEX, comment: "Недостаточно данных" };
+                }
+
+                // Сортируем ответы по userId (можно использовать другой критерий)
+                answers.sort((a, b) => b.userAssign.totalScore - a.userAssign.totalScore);
+
+                const groupSize = Math.floor(answers.length * 0.27);
+
+                const topGroup = answers.slice(0, groupSize);
+                const bottomGroup = answers.slice(-groupSize);
+
+                const topGroupAverage = topGroup.reduce((sum, answer) => sum + (answer.correct ? 1 : 0), 0) / groupSize;
+                const bottomGroupAverage = bottomGroup.reduce((sum, answer) => sum + (answer.correct ? 1 : 0), 0) / groupSize;
+
+                const discriminationIndex = topGroupAverage - bottomGroupAverage;
+
+                // Определяем комментарий
+                let comment;
+                const allCorrect = answers.every(answer => answer.correct);
+                const allIncorrect = answers.every(answer => !answer.correct);
+
+                if (allCorrect) {
+                    comment = "Слишком легкий вопрос";
+                } else if (allIncorrect) {
+                    comment = "Слишком сложный вопрос";
+                } else if (discriminationIndex < 0) {
+                    comment = "Не связан с уровнем знаний (поменять формулировку)";
+                } else if (discriminationIndex === 1) {
+                    comment = "Идеальная дискриминативность";
+                } else if (discriminationIndex === 0) {
+                    comment = "Не связан с уровнем знаний (поменять формулировку)";
+                } else {
+                    comment = "Нормальный уровень дискриминации";
+                }
+
+                return { index: discriminationIndex, comment: comment };
+            }
+
+            // Обновляем массив вопросов, добавляя дискриминацию и комментарий
+            questions.forEach(question => {
+                if (groupedAnswers[question.id]) {
+                    const { index, comment } = getDiscriminationIndexAndComment(groupedAnswers[question.id]);
+                    question.discriminationIndex = index;
+                    question.discriminationComment = comment;
+                } else {
+                    question.discriminationIndex = STANDARD_DISCRIMINATION_INDEX;
+                    question.discriminationComment = "Недостаточно данных";
+                }
+            });
+
+            return questions;
+        }
+
+        const updatedQuestions = calculateDiscriminationIndex(userQuestions, questions);
+
+        res.json(updatedQuestions);
     }
 
     async updateQuestion(req: Request, res: Response) {
@@ -401,6 +483,22 @@ export class TestsController {
             return res.status(500).json({error: dbErrorsHandler(e)})
         }
         return res.json(updatedQuestion)
+    }
+
+    async deleteQuestion(req: Request, res: Response) {
+        const id = parseInt(req.params.id);
+
+        const questions: Question[] = await client.question.update({
+            where: {
+                id: id
+            },
+            data: {
+                hidden: true
+            }
+        })
+
+        res.json(questions);
+
     }
 
     async createSubject(req: Request, res: Response) {
@@ -908,6 +1006,55 @@ export class TestsController {
 
     }
 
+
+    async userQuestions(req: Request, res: Response) {
+        const assign_id = parseInt(req.params.assign_id);
+        const user_id = (req as any).user.id;
+
+        const userQuestions = await client.userQuestions.findMany({
+            where: {
+                userAssign: {
+                    assignId: assign_id,
+                    userId: user_id
+                }
+            },
+            include: {
+                question: {
+                    include: {
+                        subjects: true
+                    }
+                },
+                answer: true
+            }
+        });
+
+        // Функция для группировки данных по subjectId
+        function groupBySubjectId(questions) {
+            // Создаем объект для хранения результатов
+            const grouped = questions.reduce((acc, question) => {
+                const subjectId = question.question.subjectId;
+                // Если объект для данного subjectId еще не создан, создаем его
+                if (!acc[subjectId]) {
+                    acc[subjectId] = {
+                        subjectName: question.question.subjects.name,
+                        questions: []
+                    };
+                }
+                // Добавляем текущий вопрос в массив вопросов по текущему subjectId
+                acc[subjectId].questions.push(question);
+                return acc;
+            }, {});
+
+            // Преобразуем объект в массив значений
+            return Object.values(grouped);
+        }
+
+        // Группируем данные
+        const groupedQuestions = groupBySubjectId(userQuestions);
+
+        return res.json(groupedQuestions)
+    }
+
     async result(req: Request, res: Response) {
         const assign_id = parseInt(req.params.assign_id);
         const user_id = (req as any).user.id;
@@ -922,10 +1069,26 @@ export class TestsController {
             include: {
                 question: {
                     include: {subjects: true}
+                },
+                userAssign: {
+                    include: {
+                        assign: {
+                            include: {
+                                testTemplate: true
+                            }
+                        }
+                    }
                 }
             }
         });
 
+        const templateData = await client.testTemplateSubjects.findMany({
+            where: {
+                testTemplateId: userQuestions[0].userAssign.assign.testTemplate.id
+            }
+        });
+
+        // console.log(templateData)
 
         // Создаём объект для группировки данных
         const groupedData = {};
@@ -939,7 +1102,8 @@ export class TestsController {
                 groupedData[subjectName] = {
                     subject: subjectName,
                     questions: [],
-                    levels: [] // Массив для уровней вопросов по каждой теме
+                    levels: [],
+                    threshold: templateData.find(templateItem => templateItem.subjectId === item.question.subjects.id).threshold
                 };
             }
 
@@ -1368,6 +1532,9 @@ export class TestsController {
                                             Subject: {
                                                 include: {
                                                     questions: {
+                                                        where: {
+                                                            hidden: false
+                                                        },
                                                         include: {
                                                             answers: true
                                                         }
@@ -1390,7 +1557,7 @@ export class TestsController {
         let attemptsCount = assign[0].assign.testSettings.attemptsCount;
         let attempts = assign[0].attempts;
 
-        if (attemptsCount >= attempts) {
+        if (attemptsCount !== null && attemptsCount <= attempts) {
             return res.status(403).json({error: 'Нет доступных попыток'});
         }
 
@@ -1400,6 +1567,10 @@ export class TestsController {
 
         if (assign[0].status === 'PASSED') {
             return res.status(403).json({error: 'Данный тест уже завершён'})
+        }
+
+        if (assign[0].assign.testSettings.attemptsCount !== null && assign[0].attempts >= assign[0].assign.testSettings.attemptsCount) {
+            return res.status(403).json({error: 'Нет доступных попыток'})
         }
 
         const questions = await collectQuestions(assign)
@@ -1418,10 +1589,15 @@ export class TestsController {
         if (assign[0].questionId === null) {
             debug && console.log('Тест начинается. Подбираю первый вопрос')
             // Выбираем первый вопрос
+
+            if (questions.length < 1) {
+                return res.status(400).json({error: 'В тесте нет вопросов'})
+            }
+
             const firstSubject = questions[0].subjectId
             const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
 
-            const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
+            const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null && assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== 0 ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
             debug && console.log('Стартовая сложность', initLevel)
 
             // Ищем ближайший вопрос к этой сложности

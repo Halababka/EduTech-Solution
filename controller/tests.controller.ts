@@ -311,7 +311,7 @@ export class TestsController {
             // Функция для расчета дискриминации и определения комментария
             function getDiscriminationIndexAndComment(answers) {
                 if (answers.length < 10) {
-                    return { index: STANDARD_DISCRIMINATION_INDEX, comment: "Недостаточно данных" };
+                    return {index: STANDARD_DISCRIMINATION_INDEX, comment: "Недостаточно данных"};
                 }
 
                 // Сортируем ответы по userId (можно использовать другой критерий)
@@ -346,13 +346,13 @@ export class TestsController {
                     comment = "Нормальный уровень дискриминации";
                 }
 
-                return { index: discriminationIndex, comment: comment };
+                return {index: discriminationIndex, comment: comment};
             }
 
             // Обновляем массив вопросов, добавляя дискриминацию и комментарий
             questions.forEach(question => {
                 if (groupedAnswers[question.id]) {
-                    const { index, comment } = getDiscriminationIndexAndComment(groupedAnswers[question.id]);
+                    const {index, comment} = getDiscriminationIndexAndComment(groupedAnswers[question.id]);
                     question.discriminationIndex = index;
                     question.discriminationComment = comment;
                 } else {
@@ -730,7 +730,7 @@ export class TestsController {
             return
         }
 
-        let subjectsList: subject[]
+        let subjectsList: Subject[]
         try {
             subjectsList = await client.subject.findMany()
         } catch (e) {
@@ -748,6 +748,7 @@ export class TestsController {
 
             // Индексировать существующие записи по subjectId для удобства
             let existingSubjectsMap = {};
+            // @ts-ignore
             template.subjectsSettings.forEach(subject => {
                 existingSubjectsMap[subject.subjectId] = subject;
             });
@@ -771,6 +772,7 @@ export class TestsController {
             });
 
             // Оставшиеся записи в existingSubjectsMap являются удаленными
+            // @ts-ignore
             deletedRecords = Object.values(existingSubjectsMap).map(subject => subject.subjectId);
 
             deletedRecords.length !== 0 && (function deleteQuery() {
@@ -1088,413 +1090,49 @@ export class TestsController {
             }
         });
 
-        // console.log(templateData)
-
         // Создаём объект для группировки данных
         const groupedData = {};
 
         // Проходим по каждому элементу исходного массива data
+        // Проходим по каждому элементу исходного массива data
         userQuestions.forEach(item => {
             const subjectName = item.question.subjects.name;
 
-            // Если для данной темы ещё не создан массив вопросов, создаём его
+            // Если для данной темы ещё не создан объект, создаём его
             if (!groupedData[subjectName]) {
                 groupedData[subjectName] = {
                     subject: subjectName,
                     questions: [],
                     levels: [],
+                    correct: 0,
+                    total: 0,
                     threshold: templateData.find(templateItem => templateItem.subjectId === item.question.subjects.id).threshold
                 };
             }
 
-            // Добавляем объект вопроса в массив вопросов для текущей темы
+            // Добавляем вопрос в массив вопросов и уровень в массив уровней
             groupedData[subjectName].questions.push(item.question);
-
-            // Добавляем уровень вопроса в массив уровней для текущей темы
             groupedData[subjectName].levels.push(item.level);
+
+            // Увеличиваем общее количество вопросов
+            groupedData[subjectName].total++;
+
+            // Если ответ правильный, увеличиваем количество правильных ответов
+            if (item.correct) {
+                groupedData[subjectName].correct++;
+            }
+
+            // // Добавляем объект вопроса в массив вопросов для текущей темы
+            // groupedData[subjectName].questions.push(item.question);
+            //
+            // // Добавляем уровень вопроса в массив уровней для текущей темы
+            // groupedData[subjectName].levels.push(item.level);
         });
 
         // Преобразуем объект groupedData в массив, чтобы получить конечный результат
         const resultArray = Object.values(groupedData);
 
         return res.json(resultArray)
-    }
-
-    async nextQuestion(req: Request, res: Response) {
-        const {ids, text_answer} = req.body;
-        const user_id = (req as any).user.id;
-        const assign_id = parseInt(req.params.assign_id);
-
-        let selected = {
-            ids: ids,
-            text_answer: text_answer
-        }
-
-        let assign
-        try {
-            assign = await client.userAssign.findMany({
-                where: {
-                    AND: [
-                        {userId: user_id},
-                        {assignId: assign_id}
-                    ]
-                },
-                include: {
-                    UserQuestions: {
-                        include: {
-                            question: true
-                        }
-                    },
-                    assign: {
-                        include: {
-                            testSettings: true,
-                            testTemplate: {
-                                include: {
-                                    subjectsSettings: {
-                                        include: {
-                                            Subject: {
-                                                include: {
-                                                    questions: {
-                                                        include: {
-                                                            answers: true
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        } catch (e) {
-            res.status(500).json({error: dbErrorsHandler(e)})
-            return
-        }
-
-        if (assign.length === 0) {
-            return res.status(404).json({error: 'Тест не найден'})
-        }
-
-        if (assign[0].status === 'PASSED') {
-            return res.status(403).json({error: 'Данный тест уже завершён'})
-        }
-
-        const questions = await collectQuestions(assign)
-
-        const startTime = assign[0].assign.testSettings.startTime
-        const endTime = assign[0].assign.testSettings.endTime
-        const now = new Date()
-
-        if (now < startTime) {
-            return res.status(403).json({error: 'Тест ещё не открыт'})
-        } else if (now > endTime) {
-            return res.status(403).json({error: 'Тест уже закончился'})
-        }
-
-        if (assign[0].questionId === null) {
-            debug && console.log('Тест начинается. Подбираю первый вопрос')
-            // Выбираем первый вопрос
-            // Средняя сложность среди всех вопросов всех тем
-            const firstSubject = questions[0].subjectId
-            const questionsBySubject = questions.filter(question => question.subjectId === firstSubject)
-
-            const initLevel = assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings[0].initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length;
-            debug && console.log('Стартовая сложность', initLevel)
-
-            // Ищем ближайший вопрос к этой сложности
-            const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
-
-            // Сохраняем в базу текущий вопрос
-            try {
-                await client.userAssign.update({
-                    where: {
-                        id: assign[0].id
-                    },
-                    data: {
-                        startTime: new Date(),
-                        questionId: currentQuestion.id,
-                        UserQuestions: {
-                            create: [
-                                {
-                                    question: {
-                                        connect: {id: currentQuestion.id}
-                                    },
-                                    level: initLevel
-                                }
-                            ]
-                        }
-                    }
-                })
-            } catch (e) {
-                res.status(500).json({error: dbErrorsHandler(e)})
-                return
-            }
-            return res.status(200).json(currentQuestion)
-        } else {
-            // Есть ответ на текущий
-            if (ids || text_answer) {
-                //TODO: Проверерка если на текущий уже отвечали
-                debug && console.log('Ответ есть, проверяю правильность')
-
-                const currentQuestion = questions.find(question => question.id === assign[0].questionId)
-                if (currentQuestion.type !== 'TEXT_ANSWER' && !ids) {
-                    return res.status(400).json({error: 'Не дан ответ на вопрос'})
-                }
-                if (currentQuestion.type == 'TEXT_ANSWER' && !text_answer) {
-                    return res.status(400).json({error: 'Не дан ответ на вопрос'})
-                }
-
-                // Ищем в какой UserQuestions будем заносить
-                const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
-
-                // Рассчитываем коэффициент вопроса
-                const coefficient = 1 / userQuestion.level
-
-                let newLevel;
-
-                debug && console.log('Текущая сложность', userQuestion.level)
-                debug && console.log('Коэффициент', coefficient)
-                // Если ответили верно, увеличить сложность, иначе уменьшить
-                const correctness = checkAnswerCorrect(selected, currentQuestion)
-                if (correctness) {
-                    // Увеличиваем сложность
-                    newLevel = userQuestion.level + coefficient
-                    debug && console.log('Оцениваю: Увеличиваем сложность', newLevel)
-                } else {
-                    // Уменьшаем сложность
-                    newLevel = userQuestion.level - coefficient
-                    debug && console.log('Оцениваю: Уменьшаем сложность', newLevel)
-                    if (newLevel < 0) {
-                        newLevel = 0
-                    }
-                }
-
-                // Заносим в базу отвеченные
-                try {
-                    await client.userQuestions.update({
-                        where: {
-                            id: userQuestion.id
-                        },
-                        data: {
-                            level: parseFloat(newLevel.toFixed(2)),
-                            answer: {
-                                create: createAnswerObject(selected, currentQuestion)
-                            },
-                            correct: correctness
-                        }
-                    })
-                } catch (e) {
-                    res.status(500).json({error: dbErrorsHandler(e)})
-                    return
-                }
-
-                //     Подобрать и спросить следущий вопрос, учитывая тему и т.п.
-                //     И которого нет в уже отвеченных
-                const askedQuestions = assign[0].UserQuestions
-                // console.log(askedQuestions)
-
-                // Номер темы предыдущего вопроса
-                const lastSubject = currentQuestion.subjectId
-
-                // Выбираем вопросы из этой темы
-                const questionSet = questions.filter(question => question.subjectId === lastSubject)
-
-                // Создаем массив идентификаторов уже заданных вопросов
-                const askedQuestionIds = askedQuestions.map(q => q.questionId);
-
-                // Фильтруем исходный массив вопросов, чтобы получить спрошенные вопросы в этой теме
-                const filteredQuestionSet = questionSet.filter(q => !askedQuestionIds.includes(q.id));
-
-                // Если заданное количество вопросов в теме было задано
-                const CountTotalQuestions = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === lastSubject).totalQuestions
-                const totalQuestions = assign[0].assign.testTemplate.subjectsSettings
-                // return
-
-                const askedSubjectsIds = Array.from(new Set(askedQuestions.map(item => item.question.subjectId)));
-
-                console.log(totalQuestions)
-                console.log(askedQuestions)
-
-                // Создаем объект для хранения количества заданных вопросов по каждому subjectId
-                const askedCounts = {};
-
-                // Считаем количество заданных вопросов для каждого subjectId
-                askedQuestions.forEach(question => {
-                    const subjectId = question.question.subjectId;
-                    if (!askedCounts[subjectId]) {
-                        askedCounts[subjectId] = 0;
-                    }
-                    askedCounts[subjectId]++;
-                });
-
-                // Формируем массив askedSubjectsId на основе askedCounts и totalQuestions
-                const askedSubjectsId = totalQuestions.reduce((result, item) => {
-                    const {subjectId, totalQuestions} = item;
-                    if (totalQuestions === null) {
-                        // Если totalQuestions равно null, включаем все subjectId
-                        result.push(subjectId);
-                    } else {
-                        // Иначе включаем subjectId только если количество заданных вопросов больше или равно totalQuestions
-                        if (askedCounts[subjectId] >= totalQuestions) {
-                            result.push(subjectId);
-                        }
-                    }
-                    return result;
-                }, []);
-
-                console.log(askedSubjectsId)
-
-                // return
-
-                debug && console.log(`Количество вопросов, которые необходимо было спросить: ${CountTotalQuestions}, было задано ${askedQuestions.length}`)
-                // return
-                // console.log(totalQuestions)
-                // if (totalQuestions !== null && askedQuestions.length >= totalQuestions) {
-                //     debug && console.log(`Завершаю тест`)
-                //     try {
-                //         await client.userAssign.update({
-                //             where: {
-                //                 id: assign[0].id
-                //             },
-                //             data: {
-                //                 status: 'PASSED',
-                //                 endTime: new Date()
-                //             }
-                //         })
-                //     } catch (e) {
-                //         res.status(500).json({error: dbErrorsHandler(e)})
-                //         return
-                //     }
-                //
-                //     return res.json('Завершаем тестирование')
-                // }
-
-                // Если вопросов нет, то переходим к следующей теме
-                // if (filteredQuestionSet.length === 0) {
-
-                if (filteredQuestionSet.length >= CountTotalQuestions || askedQuestions.length >= CountTotalQuestions) {
-                    debug && console.log('Вопросы в теме заданы или закончились. Подбираю новый вопрос')
-                    // Берём оставшиеся вопросы, которые не были заданы
-                    const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id)).filter(question => !askedSubjectsIds.includes(question.subjectId));
-
-                    // Вопросов не осталось, завершаю тест
-                    if (lostQuestions.length === 0) {
-                        // Добавить последнюю сложность в отвеченный последним вопрос
-                        debug && console.log('Вопросов не осталось, завершаю тест')
-                        try {
-                            await client.userAssign.update({
-                                where: {
-                                    id: assign[0].id
-                                },
-                                data: {
-                                    status: 'PASSED',
-                                    endTime: new Date()
-                                }
-                            })
-                        } catch (e) {
-                            res.status(500).json({error: dbErrorsHandler(e)})
-                            return
-                        }
-
-                        return res.json('Завершаем тестирование')
-                    }
-
-                    // Выбираем новую главную тему
-                    const firstSubject = lostQuestions[0].subjectId
-                    const questionsBySubject = lostQuestions.filter(question => question.subjectId === firstSubject)
-
-                    const initLevel = (assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty !== null ? assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === firstSubject).initialDifficulty : questionsBySubject.map(question => question.level).reduce((a, b) => a + b, 0) / questionsBySubject.length);
-
-                    const currentQuestion = findQuestionByDifficulty(questionsBySubject, initLevel)
-
-                    debug && console.log('Стартовая сложность новой темы: ', initLevel)
-
-                    // Сохраняем в базу текущий вопрос
-                    try {
-                        await client.userAssign.update({
-                            where: {
-                                id: assign[0].id
-                            },
-                            data: {
-                                questionId: currentQuestion.id,
-                                UserQuestions: {
-                                    create: [
-                                        {
-                                            question: {
-                                                connect: {id: currentQuestion.id}
-                                            },
-                                            level: initLevel
-                                        }
-                                    ]
-                                }
-                            }
-                        })
-                    } catch (e) {
-                        res.status(500).json({error: dbErrorsHandler(e)})
-                        return
-                    }
-                    return res.status(200).json(currentQuestion)
-                }
-
-                debug && console.log('Подбираю следующий вопрос в той же теме')
-
-                // Берём доступный список вопросов
-                const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))
-
-                // Берём вопросы связанные с этой темой
-                const questionSetBySubject = lostQuestions.filter(question => question.subjectId === currentQuestion.subjectId)
-
-                // Подбираем следующий вопрос
-                const newQuestion = findQuestionByDifficulty(questionSetBySubject, 8)
-
-
-                if (!isFinite(newLevel)) newLevel = 0
-                // Сохраняем в базу текущий вопрос
-
-                try {
-                    await client.userAssign.update({
-                        where: {
-                            id: assign[0].id
-                        },
-                        data: {
-                            questionId: newQuestion.id,
-                            UserQuestions: {
-                                create: [
-                                    {
-                                        question: {
-                                            connect: {id: newQuestion.id} // Connect to an existing Question
-                                        },
-                                        level: newLevel
-                                    }
-                                ]
-                            }
-                        }
-                    })
-                } catch (e) {
-                    res.status(500).json({error: dbErrorsHandler(e)})
-                    return
-                }
-                return res.status(200).json(newQuestion)
-            } else {
-                //     Ответа нет, повторяем вопрос
-                const questionsBySubject: any = questions.find(question => question.id === assign[0].questionId)
-
-                if (questionsBySubject.type === 'TEXT_ANSWER') {
-                    delete questionsBySubject.answers;
-                } else {
-                    questionsBySubject.answers.forEach(answer => {
-                        delete answer.correct;
-                    });
-                }
-
-                return res.json(questionsBySubject)
-            }
-
-            // Если вопросов нет или выполнились условия завершения, завершить тест
-        }
     }
 
     async NewNextQuestion(req: Request, res: Response) {
@@ -1647,7 +1285,7 @@ export class TestsController {
                 const userQuestion = assign[0].UserQuestions.find(question => question.questionId === currentQuestion.id)
 
                 // Рассчитываем коэффициент вопроса
-                const coefficient = 1 / userQuestion.level
+                const coefficient = userQuestion.level > 0 ? 1 / userQuestion.level : 0
 
                 let newLevel;
 
@@ -1691,7 +1329,8 @@ export class TestsController {
                 const lastSubject = currentQuestion.subjectId
 
                 // Заданные вопросы
-                const askedQuestions = assign[0].UserQuestions
+                const askedQuestions = assign[0].UserQuestions.filter(item => item.question.subjectId == currentQuestion.subjectId)
+                // const askedQuestions = assign[0].UserQuestions.filter(item => item.subjectId == currentQuestion.subjectId)
                 // Все вопросы
 
                 // Количество вопросов, которые надо задать в текущей теме
@@ -1847,10 +1486,47 @@ export class TestsController {
                     return res.status(204).json('Завершаем тестирование')
                 }
 
+                const totalCountQuestions = assign[0].assign.testTemplate.subjectsSettings.reduce((sum, item) => sum + item.totalQuestions, 0)
+                const countAskedQuestions = assign[0].UserQuestions.length
+
+                console.log(totalCountQuestions)
+                return
+
+                if (countAskedQuestions >= totalCountQuestions) {
+                    debug && console.log(`Завершаю тест, так как нужное количество вопросов задано`)
+                    try {
+                        await client.userAssign.update({
+                            where: {
+                                id: assign[0].id
+                            },
+                            data: {
+                                attempts: assign[0].attempts + 1,
+                                status: 'PASSED',
+                                endTime: new Date()
+                            }
+                        })
+                    } catch (e) {
+                        res.status(500).json({error: dbErrorsHandler(e)})
+                        return
+                    }
+
+                    return res.status(204).json('Завершаем тестирование')
+                }
+
+                return
                 if (askedQuestions.length >= totalSubjectQuestions) {
                     debug && console.log('Подбираю новый вопрос в следующей же теме')
-
                     const newQuestion = findQuestionByDifficulty(filteredQuestions, newLevel)
+
+                    const newSubjectProperties = assign[0].assign.testTemplate.subjectsSettings.find(subject => subject.subjectId === newQuestion.subjectId)
+
+                    const filteredBySubject = filteredQuestions.filter(question => question.subjectId === newQuestion.subjectId);
+                    const totalLevel = filteredBySubject.reduce((sum, question) => sum + question.level, 0);
+                    const averageLevel = filteredBySubject.length ? (totalLevel / filteredBySubject.length).toFixed(2) : 0;
+
+                    const initLevel = newSubjectProperties.initialDifficulty !== null ? newSubjectProperties.initialDifficulty : averageLevel
+
+                    debug && console.log('Стартовая сложность новой темы', initLevel)
 
                     try {
                         await client.userAssign.update({
@@ -1865,7 +1541,7 @@ export class TestsController {
                                             question: {
                                                 connect: {id: newQuestion.id}
                                             },
-                                            level: newLevel
+                                            level: initLevel
                                         }
                                     ]
                                 }
@@ -1883,15 +1559,15 @@ export class TestsController {
 
                 // Выбираем вопросы из этой темы
                 const questionSet = questions.filter(question => question.subjectId === lastSubject)
-                console.log(questionSet)
+                // console.log(questionSet)
 
                 // Создаем массив идентификаторов уже заданных вопросов
                 const askedQuestionIds = askedQuestions.map(q => q.questionId);
-                console.log(askedQuestionIds)
+                // console.log(askedQuestionIds)
 
                 // Фильтруем исходный массив вопросов, чтобы получить спрошенные вопросы в этой теме
                 const notAskedQuestions = questionSet.filter(q => !askedQuestionIds.includes(q.id));
-                console.log(notAskedQuestions)
+                // console.log(notAskedQuestions)
 
                 // Берём доступный список вопросов
                 // const lostQuestions = questions.filter(q => !askedQuestionIds.includes(q.id))

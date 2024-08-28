@@ -1,61 +1,25 @@
-# main/api
+# main
 
-Пароль test от базовых аккаунтов из файла seed: ilya, ivan, petr
+# Запуск менеджера пакетов pm2
 
-## Запуск dev
-### Npm
+### Запуск всех сервисов
 ```shell
-npm install
+pm2 start ecosystem.config.js
+```
+###### Удаление продакшена из менеджера
+```shell
+pm2 delete "web-app production"
+```
+### Статичная версия сайта (продакшн)
+```shell
+cd .\web-client\
 ```
 ```shell
-npm run dev
-```
-### Bun
-```shell
-bun install
+npm run build
 ```
 ```shell
-bun run dev
+cd ..\
 ```
-
-
-## Prisma
-
-# Сгенерировать конфиг для базы(после npm install и после изменения названия пароля адреса бд)
-### Npm
 ```shell
-npx prisma generate --schema=./prisma/schema.prisma
-```
-### Bun
-```shell
-prisma generate --schema=./prisma/schema.prisma
-```
-
-# После изменении/создании модели нужно написать
-### Npm
-```shell
-npx prisma migrate dev
-```
-### Bun
-```shell
-prisma migrate dev
-```
-
-# Запись в БД первоначальных данных из файла seed.js
-### Npm
-```shell
-npx prisma db seed
-```
-### Bun
-```shell
-prisma db seed
-```
-# Запуск Prisma studio
-### Npm
-```shell
-npx prisma studio
-```
-### Bun
-```shell
-prisma studio
+pm2 start ecosystem.config.js --only "web-app production"
 ```

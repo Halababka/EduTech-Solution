@@ -1,0 +1,36 @@
+@import "colours";
+
+@mixin themeProperty($theme, $property, $color, $additionalPropertiesPositionIsFront, $additionalProperties) {
+  @if $additionalPropertiesPositionIsFront {
+    #{$property}: unquote($additionalProperties + ' ' + map-get($theme, $color));
+  } @else {
+    #{$property}: unquote(map-get($theme, $color) + ' ' + $additionalProperties);
+  }
+}
+
+@mixin theme($property, $color, $additionalPropertiesPositionIsFront: false, $additionalProperties: '') {
+  $light: map-get($themes, $light-theme);
+  $dark: map-get($themes, $dark-theme);
+
+  @include themeProperty($light, $property, $color, $additionalPropertiesPositionIsFront, $additionalProperties);
+
+  @media (prefers-color-scheme: dark) {
+    @include themeProperty($dark, $property, $color, $additionalPropertiesPositionIsFront, $additionalProperties);
+  }
+}
+
+@mixin define-icon($name, $bg, $width: 22px, $height: 22px, $mp: center, $mr: 5px) {
+  .icon-#{$name} {
+    display: inline-block; //растягивает на всю ширину
+    width: $width;
+    height: $height;
+    margin: $mr;
+    @include theme('background', $bg);
+    -webkit-mask-image: url("@/assets/imgs/#{$name}.svg");
+    mask-image: url("@/assets/imgs/#{$name}.svg");
+    mask-repeat: no-repeat;
+    mask-position: $mp;
+    mask-size: contain;
+    cursor: pointer;
+  }
+}

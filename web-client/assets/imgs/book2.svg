@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="b" data-name="Слой 2" xmlns="http://www.w3.org/2000/svg" width="57.5" height="71" viewBox="0 0 57.5 71">
+  <defs>
+    <style>
+      .d {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 4px;
+      }
+    </style>
+  </defs>
+  <g id="c" data-name="Слой 1">
+    <g>
+      <path class="d" d="M10,18.99h0c-4.39,0-7.99-3.59-7.99-7.99h0s-.01,0-.01,.01V62.04c0,3.84,3.11,6.96,6.96,6.96H42.99s.01,0,.01-.01V19.01s0-.01-.01-.01H10.01s-.01,0-.01-.01Z"/>
+      <path class="d" d="M55.47,54l.03-52H8.03v.03c-3.36,.27-6.03,4.07-6.03,8.72"/>
+    </g>
+  </g>
+</svg>

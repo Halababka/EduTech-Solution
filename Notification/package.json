@@ -1,0 +1,24 @@
+{
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.13.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "prisma": "^5.13.0",
+    "socket.io": "^4.7.5"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.8",
+    "utf-8-validate": "^5.0.10"
+  }
+}

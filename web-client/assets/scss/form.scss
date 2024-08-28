@@ -1,0 +1,74 @@
+@import "mixins";
+
+.auth-form, .register-form {
+  display: flex;
+  border-radius: 15px;
+  flex-direction: column;
+  align-items: stretch;
+  width: 50%;
+  min-width: min-content;
+  padding: 40px 40px;
+  gap: 30px;
+  @include theme('box-shadow', $shadow-color, true, 2px 0px 8px 0px);
+  @include theme('background', $general-background-light);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+
+  h2 {
+    text-align: center;
+    font-size: 30px;
+  }
+}
+
+//.input-form {
+//  margin: 10px 0;
+//  > input {
+//    width: 100%;
+//  }
+//  a {
+//    display: block;
+//    text-align: right;
+//    @include theme('color', $primary-color);
+//    font-size: 18px;
+//    text-decoration: none;
+//    transition: 0.3s;
+//  }
+//  a:hover {
+//    @include theme('color', $primary-color-dark);
+//  }
+//}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  & input {
+    width: 100%;
+  }
+}
+
+.link {
+  display: block;
+  text-align: right;
+  width: max-content;
+  @include theme('color', $primary-color);
+  font-size: 18px;
+  text-decoration: none;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.link:hover {
+  @include theme('color', $primary-color-dark);
+}

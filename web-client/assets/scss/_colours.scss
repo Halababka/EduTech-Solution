@@ -1,0 +1,64 @@
+$dark: #121212;
+$dark-mate: #292a2d;
+$dark-mate-mate: #dbdee8;
+$dark-mate-mate-opacity: rgba(219, 222, 232, 0.8);
+
+// Light mode
+$light: #ffffff;
+$light-mate: #dcfffd;
+
+// Blue
+$blue: #2255f4;
+$blue-mate: #1e42bb;
+
+$dark-theme: "dark-theme";
+$light-theme: "light-theme";
+
+$primary-color-dark: "primary-color-dark";
+$primary-color: "primary-color";
+$primary-color-light: "primary-color-light";
+$primary-color-text: "primary-color-text";
+$primary-text-color: "primary-text-color";
+$secondary-text-color: "secondary-text-color";
+$divider-color: "divider-color";
+$general-background: "general-background";
+$general-background-light: "general-background-light";
+$opacity-color: "opacity-color";
+$gradient-loader: "gradient-loader";
+$shadow-color: "shadow-color";
+$primary-color-opacity: "primary-color-opacity";
+
+$themes: (
+        $light-theme: (
+                $primary-color-dark: #1e42bb,
+                $primary-color: #2255f4,
+                $primary-color-opacity:  rgb(34 85 244 / 15%),
+                $primary-color-light: #DFDFF1,
+                $primary-color-text: #FFFFFF,
+                $primary-text-color: #151515,
+                $secondary-text-color: #575757,
+                $divider-color: #dbdee8,
+                $general-background: #ececec,
+                $general-background-light: #ffffff,
+                $gradient-loader: linear-gradient(90deg, #ffffff 0%, #ffffff 40%, #DDDDDD 50%, #DDDDDD 55%, #ffffff 65%, #ffffff 100%),
+                $opacity-color: rgba(219, 222, 232, 0.8),
+                $shadow-color: #0000003b,
+          /* ...other color keys with HEX values... */
+        ),
+        $dark-theme: (
+                $primary-color-dark: #1e42bb,
+                $primary-color: #2255f4,
+                $primary-color-opacity:  rgb(34 85 244 / 15%),
+                $primary-color-light: #DFDFF1,
+                $primary-color-text: #FFFFFF,
+                $primary-text-color: #d7d7d8,
+                $secondary-text-color: #A6A6A6,
+                $divider-color: #575757,
+                $general-background: #19191a,
+                $general-background-light: #363636,
+                $gradient-loader: linear-gradient(90deg, #363636 0%, #363636 40%, #6b6b6b 50%, #6b6b6b 55%, #363636 65%, #363636 100%),
+                $opacity-color: rgba(62, 65, 65, 0.8),
+                $shadow-color: rgba(255, 255, 255, 0.23),
+          /* ...other color keys with HEX values... */
+        )
+);

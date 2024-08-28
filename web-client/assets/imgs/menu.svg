@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="b" data-name="Слой 2" xmlns="http://www.w3.org/2000/svg" width="83" height="43" viewBox="0 0 83 43">
+  <defs>
+    <style>
+      .d {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 5px;
+      }
+    </style>
+  </defs>
+  <g id="c" data-name="Слой 1">
+    <g>
+      <line class="d" x1="2.5" y1="2.5" x2="80.5" y2="2.5"/>
+      <line class="d" x1="2.5" y1="21.5" x2="80.5" y2="21.5"/>
+      <line class="d" x1="2.5" y1="40.5" x2="80.5" y2="40.5"/>
+    </g>
+  </g>
+</svg>

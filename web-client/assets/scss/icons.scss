@@ -1,0 +1,18 @@
+@import "mixins";
+
+@include define-icon(home, $primary-text-color, 30px, 30px);
+@include define-icon(book, $primary-text-color, 30px, 30px);
+@include define-icon(book_add, $primary-text-color, 30px, 30px);
+@include define-icon(book_change, $primary-text-color, 30px, 30px);
+@include define-icon(book2, $primary-text-color, 25px, 25px);
+@include define-icon(people, $primary-text-color, 30px, 30px);
+@include define-icon(profile, $primary-text-color, 30px, 30px);
+@include define-icon(logout, $primary-text-color, 30px, 30px);
+@include define-icon(admin_panel, $primary-text-color, 30px, 30px);
+@include define-icon(homework_check, $primary-text-color, 30px, 30px);
+@include define-icon(close, $primary-text-color, 15px, 15px, center, none);
+@include define-icon(menu, $primary-text-color, 30px, 30px);
+@include define-icon(arrow, $primary-text-color, 10px, 8px);
+@include define-icon(tests, $primary-text-color, 30px, 30px);
+@include define-icon(meet, $primary-text-color, 30px, 30px);
+

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="b" data-name="Слой 2" xmlns="http://www.w3.org/2000/svg" width="69.5" height="100" viewBox="0 0 69.5 100">
+  <defs>
+    <style>
+      .d {
+        fill: none;
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 5px;
+      }
+    </style>
+  </defs>
+  <g id="c" data-name="Слой 1">
+    <g>
+      <path class="d" d="M48.5,68v20.5c0,4.97-4.03,9-9,9H11.5c-4.97,0-9-4.03-9-9V11.5C2.5,6.53,6.53,2.5,11.5,2.5h28c4.97,0,9,4.03,9,9V29.55"/>
+      <g>
+        <line class="d" x1="67" y1="50.5" x2="55.55" y2="40.5"/>
+        <polyline class="d" points="55.55 60.5 67 50.5 25.5 50.5"/>
+      </g>
+    </g>
+  </g>
+</svg>

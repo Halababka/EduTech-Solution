@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="b" data-name="Слой 2" xmlns="http://www.w3.org/2000/svg" width="92.21" height="101.57" viewBox="0 0 92.21 101.57">
+  <defs>
+    <style>
+      .d {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 5px;
+      }
+
+      .d, .e, .f {
+        stroke: #000;
+      }
+
+      .e {
+        font-family: Bahnschrift, Bahnschrift;
+        font-size: 78.86px;
+        font-variation-settings: 'wght' 400, 'wdth' 100;
+      }
+
+      .e, .f {
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+
+      .f {
+        font-family: MyriadPro-Regular, 'Myriad Pro';
+        font-size: 52.82px;
+      }
+    </style>
+  </defs>
+  <g id="c" data-name="Слой 1">
+    <g>
+      <path class="d" d="M11.57,10.31H89.71V87.15c0,4.97-4.03,9-9,9H11.57V10.31h0Z"/>
+      <text class="e" transform="translate(15.58 79.24)"><tspan x="0" y="0">A</tspan></text>
+      <text class="f" transform="translate(54.48 60.48)"><tspan x="0" y="0">+</tspan></text>
+      <polyline class="d" points="2.5 81.67 2.5 2.5 83.85 2.5"/>
+    </g>
+  </g>
+</svg>

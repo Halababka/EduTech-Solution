@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config'
+import cookieParser from 'cookie-parser'
 import authRouter from './routes/auth.routes.js';
 import coursesRouter from './routes/courses.routes.js';
 import userRouter from './routes/user.routes.js'
@@ -18,7 +19,11 @@ const PORT = process.env.PORT || 8080;
 
 const app = express();
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+   credentials: true,
+   origin: process.env.CLIENT_URL
+}))
+app.use(cookieParser())
 app.use('/api', authRouter);
 app.use('/api/courses', coursesRouter);
 app.use('/api/users', userRouter);

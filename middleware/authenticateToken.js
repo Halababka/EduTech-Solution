@@ -1,14 +1,16 @@
-import jwt from "jsonwebtoken";
-
-const secret = process.env.SECRET;
+import { tokenService } from "../service/token.service.js";
 
 export const authenticateToken = (req, res, next) => {
     try {
         const token = req.header("Authorization");
-        if (!token) return res.status(403).send({error: "Access denied."});
-        req.user = jwt.verify(token, secret);
+
+        if (!token) {
+            return res.status(403).send({error: "Access denied."});
+        }
+
+        req.user = tokenService.verifyAccessToken(token)
         next();
     } catch (error) {
-        res.status(400).send({error: "Invalid token"});
+        res.status(401).send({error: error.message});
     }
 }

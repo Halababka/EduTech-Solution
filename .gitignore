@@ -1,1 +1,16 @@
 .idea
+./api/node_modules
+./api/.env
+./api/prisma/migrations
+./web-client/node_modules
+./Notification/node_modules
+./Notification/.env
+node_modules
+*.log*
+/web-client/.nuxt
+/web-client/.nitro
+/web-client/.cache
+/web-client/.output
+/web-client/.env
+/web-client/dist
+/web-client/.DS_Store

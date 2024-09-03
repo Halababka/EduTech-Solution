@@ -19,9 +19,9 @@ bun run dev
 ```
 
 
-## Prisma
+# Prisma
 
-# Сгенерировать конфиг для базы(после npm install и после изменения названия пароля адреса бд)
+## Сгенерировать конфиг для базы(после npm install и после изменения названия пароля адреса бд)
 ### Npm
 ```shell
 npx prisma generate --schema=./prisma/schema.prisma
@@ -31,7 +31,7 @@ npx prisma generate --schema=./prisma/schema.prisma
 prisma generate --schema=./prisma/schema.prisma
 ```
 
-# После изменении/создании модели нужно написать
+## После изменения/создании модели нужно написать
 ### Npm
 ```shell
 npx prisma migrate dev
@@ -41,7 +41,7 @@ npx prisma migrate dev
 prisma migrate dev
 ```
 
-# Запись в БД первоначальных данных из файла seed.js
+## Запись в БД первоначальных данных из файла seed.js
 ### Npm
 ```shell
 npx prisma db seed
@@ -50,7 +50,7 @@ npx prisma db seed
 ```shell
 prisma db seed
 ```
-# Запуск Prisma studio
+## Запуск Prisma studio
 ### Npm
 ```shell
 npx prisma studio
